@@ -2,6 +2,9 @@ const crypto = require("crypto");
 const models = require("../models");
 const { num, text } = require("../utils/data");
 
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET must be set in production.");
+}
 const jwtSecret = process.env.JWT_SECRET || "gssteelcashbooksecretkey";
 const tokenTtlMs = 1000 * 60 * 60 * 24 * 7;
 

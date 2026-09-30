@@ -1,9 +1,22 @@
 const express = require("express");
 const models = require("../models");
 const { createToken, hashPassword, publicUser, requireAdmin, requireAuth } = require("../middleware/auth");
+const { logAudit } = require("../services/audit");
 const { text } = require("../utils/data");
 
 const router = express.Router();
+
+router.get("/signup-status", async (req, res, next) => {
+  try {
+    const [userCount, setupClaim] = await Promise.all([
+      models.users.countDocuments(),
+      models.settings.findOne({ key: "initialAdminClaim" }).lean()
+    ]);
+    res.json({ enabled: userCount === 0 && !setupClaim });
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.post("/signup", async (req, res, next) => {
   try {
@@ -14,20 +27,40 @@ router.post("/signup", async (req, res, next) => {
       res.status(400).json({ error: "Username and 6 character password are required." });
       return;
     }
+    if (await models.users.exists({})) {
+      res.status(403).json({ error: "Public signup is closed. Ask the administrator to create your account." });
+      return;
+    }
+    try {
+      await models.settings.create({ key: "initialAdminClaim", value: true });
+    } catch (claimError) {
+      if (claimError.code === 11000) {
+        res.status(403).json({ error: "Public signup is closed. Ask the administrator to create your account." });
+        return;
+      }
+      throw claimError;
+    }
     const exists = await models.users.findOne({ username }).lean();
     if (exists) {
+      await models.settings.deleteOne({ key: "initialAdminClaim" });
       res.status(409).json({ error: "User already exists." });
       return;
     }
     const { salt, hash } = hashPassword(password);
-    const user = await models.users.create({
-      name: name || username,
-      username,
-      passwordSalt: salt,
-      passwordHash: hash,
-      role: "admin",
-      lastLoginAt: new Date().toISOString()
-    });
+    let user;
+    try {
+      user = await models.users.create({
+        name: name || username,
+        username,
+        passwordSalt: salt,
+        passwordHash: hash,
+        role: "admin",
+        lastLoginAt: new Date().toISOString()
+      });
+    } catch (createError) {
+      await models.settings.deleteOne({ key: "initialAdminClaim" });
+      throw createError;
+    }
     res.status(201).json({ token: createToken(user), user: publicUser(user) });
   } catch (error) {
     next(error);
@@ -71,6 +104,28 @@ router.get("/users", requireAuth, requireAdmin, async (req, res, next) => {
       .lean();
     res.json(users.map(publicUser));
   } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/users", requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const name = text(req.body.name);
+    const username = text(req.body.username).toLowerCase();
+    const password = String(req.body.password || "");
+    if (!name || !/^[a-z0-9._-]{3,64}$/.test(username) || password.length < 8) {
+      res.status(400).json({ error: "Name, a 3–64 character username, and an 8 character password are required." });
+      return;
+    }
+    const { salt, hash } = hashPassword(password);
+    const user = await models.users.create({ name, username, passwordSalt: salt, passwordHash: hash, role: req.body.role === "admin" ? "admin" : "user" });
+    await logAudit(req, { action: "create", collection: "users", recordId: user._id, after: publicUser(user) });
+    res.status(201).json({ user: publicUser(user) });
+  } catch (error) {
+    if (error.code === 11000) {
+      res.status(409).json({ error: "That username is already in use." });
+      return;
+    }
     next(error);
   }
 });
