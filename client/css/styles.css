@@ -1074,6 +1074,56 @@ h2 { font-size: 18px; }
   grid-template-columns: repeat(2, minmax(150px, 1fr));
 }
 
+.settings-bank-accounts {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.settings-bank-account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel, #fff);
+}
+
+.settings-bank-account > div:first-child {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.settings-bank-account small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.settings-bank-account-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.settings-account-editor {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.settings-account-editor > summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.settings-account-editor form {
+  margin-top: 14px;
+}
+
 .memo-settings-grid {
   display: grid;
   gap: 14px;

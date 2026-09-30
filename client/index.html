@@ -47,6 +47,38 @@
     .gst-imported-group-meta { color: var(--muted); font-size: 12px; }
     .gst-imported-group-content { overflow-x: auto; }
     .gst-imported-group-content table { min-width: 800px; }
+    .cashbook-panel { overflow: hidden; }
+    .cashbook-page-head { align-items: start; }
+    .cashbook-range-bar { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+    .cashbook-range-bar label { min-width: 175px; }
+    .cashbook-opening-panel, .cashbook-closing-panel { margin: 14px 0; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); }
+    .cashbook-opening-heading, .cashbook-flow-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .cashbook-opening-heading h3, .cashbook-flow-heading h3, .cashbook-closing-panel h3 { margin: 0 0 4px; }
+    .cashbook-opening-badge { padding: 5px 9px; border-radius: 999px; background: var(--panel); color: var(--muted); font-size: 12px; }
+    .cashbook-opening-grid, .cashbook-closing-grid, .cashbook-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 10px; margin-top: 12px; }
+    .cashbook-opening-card, .cashbook-balance-card, .cashbook-summary-card { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .cashbook-opening-card label, .cashbook-balance-card span, .cashbook-summary-card span { display: block; color: var(--muted); font-size: 12px; }
+    .cashbook-opening-card input { margin-top: 7px; }
+    .cashbook-balance-card strong, .cashbook-summary-card strong { display: block; margin-top: 5px; font-size: 18px; }
+    .cashbook-halves { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 18px; }
+    .cashbook-flow-panel { min-width: 0; padding: 15px; border: 1px solid var(--line); border-radius: 10px; }
+    .cashbook-credit-panel { border-top: 4px solid #228b63; }
+    .cashbook-debit-panel { border-top: 4px solid #c55858; }
+    .cashbook-flow-heading > strong { white-space: nowrap; font-size: 18px; }
+    .cashbook-credit-panel .cashbook-flow-heading > strong { color: #16734f; }
+    .cashbook-debit-panel .cashbook-flow-heading > strong { color: #ad3838; }
+    .cashbook-groups { margin-top: 12px; }
+    .cashbook-head-group { margin: 8px 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    .cashbook-head-group > summary { display: flex; justify-content: space-between; gap: 10px; padding: 11px 12px; background: var(--soft); cursor: pointer; list-style: none; }
+    .cashbook-head-group > summary::-webkit-details-marker { display: none; }
+    .cashbook-group-title { font-weight: 700; }
+    .cashbook-group-total { white-space: nowrap; font-weight: 700; }
+    .cashbook-group-table { overflow-x: auto; }
+    .cashbook-group-table table { min-width: 650px; }
+    .cashbook-group-table th, .cashbook-group-table td { padding: 7px 8px; }
+    .cashbook-empty { padding: 16px 8px; color: var(--muted); text-align: center; }
+    .cashbook-closing-panel { margin-top: 20px; }
+    @media (max-width: 900px) { .cashbook-halves { grid-template-columns: 1fr; } }
     .gst-overview-section { margin-top: 20px; }
     .gst-overview-section h3 { margin: 0 0 10px; font-size: 16px; }
     .gst-overview-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -104,6 +136,7 @@
       <button data-view="quotations">Business Quotations</button>
       <button data-view="payment">Payment Voucher</button>
       <button data-view="transfers">Balance Transfer</button>
+      <button data-view="cashbook">Cash Book</button>
       <button data-view="ledger">Transaction Ledger</button>
       <button data-view="accountsManager">Accounts Manager</button>
       <button data-view="dues">Due Register</button>
@@ -528,6 +561,7 @@
             <label>Discount<input name="discount" type="number" min="0" step="0.01" value="0"></label>
             <label>Received by Cash<input name="cash" type="number" min="0" step="0.01" value="0"></label>
             <label>Received by Bank<input name="bank" type="number" min="0" step="0.01" value="0"></label>
+            <label>Online account<select name="bankAccountId"></select></label>
             <label>Bajaj Finance<input name="bajaj" type="number" min="0" step="0.01" value="0"></label>
             <label>Payment Mode
               <select name="mode">
@@ -582,6 +616,7 @@
           <label><span id="paymentPartyLabel">Paid To</span><input name="party" list="paymentPartyList" required></label>
           <label><span id="paymentAmountLabel">Expense Amount</span><input name="amount" type="number" min="0" step="0.01" required></label>
           <label><span id="paymentBankLabel">Bank Amount</span><input name="bank" type="number" min="0" step="0.01" value="0"></label>
+          <label>Online account<select name="bankAccountId"></select></label>
           <label id="paymentFinanceField" hidden><span id="paymentFinanceLabel">Finance Amount</span><input name="bajaj" type="number" min="0" step="0.01" value="0"></label>
           <label id="paymentMethodLabel">Payment By
             <select name="paymentMethod">
@@ -618,6 +653,7 @@
             </select>
           </label>
           <label>Amount<input name="amount" type="number" min="0" step="0.01" required></label>
+          <label>Bank account<select name="bankAccountId"></select></label>
           <label class="payment-voucher-remark">Remark<input name="remark" placeholder="Optional note"></label>
           <div class="actions payment-voucher-actions">
             <button type="submit">Save transfer</button>
@@ -663,12 +699,22 @@
               </div>
             </div>
             <div class="settings-grid settings-grid-compact">
-              <label>Bank Name<input name="accountBankName" placeholder="Bank name"></label>
-              <label>Account No.<input name="accountNumber" placeholder="Account number"></label>
-              <label>IFSC<input name="accountIfsc" placeholder="IFSC"></label>
-              <label>Branch<input name="accountBranch" placeholder="Branch"></label>
-              <label class="span-2">UPI / Payment Note<input name="accountUpi" placeholder="UPI ID or payment note" readonly></label>
+              <label class="span-2">Default invoice account<select id="settingsDefaultBankAccount" name="defaultBankAccountId"></select></label>
             </div>
+            <div id="settingsBankAccounts" class="settings-bank-accounts" aria-live="polite"></div>
+            <details class="settings-account-editor">
+              <summary>Add or edit bank account</summary>
+              <form id="settingsBankAccountForm" class="settings-grid settings-grid-compact">
+                <input type="hidden" name="id">
+                <label>Account name<input name="name" placeholder="e.g. HDFC Current Account" required maxlength="80"></label>
+                <label>Bank name<input name="bankName" placeholder="Bank name"></label>
+                <label>Account number<input name="accountNumber" placeholder="Account number"></label>
+                <label>IFSC<input name="ifsc" placeholder="IFSC"></label>
+                <label>Branch<input name="branch" placeholder="Branch"></label>
+                <label class="span-2">UPI / Payment note<input name="upi" placeholder="UPI ID or payment note"></label>
+                <div class="actions span-2"><button type="submit">Save bank account</button><button type="reset" class="secondary">Clear</button></div>
+              </form>
+            </details>
           </section>
 
           <section class="settings-card">
@@ -872,6 +918,30 @@
         <div class="table-wrap tall audit-table-wrap">
           <table id="auditTable"></table>
         </div>
+      </section>
+    </section>
+
+    <section id="cashbook" class="view">
+      <section class="panel cashbook-panel">
+        <div class="panel-head cashbook-page-head">
+          <div><h2>Date-wise Cash Book</h2><p class="panel-subtitle">Review receipts and payments by account head and track cash and online balances.</p></div>
+          <div class="panel-actions"><button type="button" class="secondary" id="cashbookExportBtn">Export CSV</button><button type="button" class="secondary" data-view-jump="receipt">New receipt</button><button type="button" class="secondary" data-view-jump="payment">New payment</button></div>
+        </div>
+        <div class="cashbook-range-bar">
+          <label>From<input id="cashbookFrom" type="date"></label>
+          <label>To<input id="cashbookTo" type="date"></label>
+          <button id="cashbookApplyBtn" type="button">Apply date range</button>
+        </div>
+        <section class="cashbook-opening-panel">
+          <div class="cashbook-opening-heading"><div><h3>Opening balances</h3><p id="cashbookOpeningDateLabel" class="panel-subtitle">Calculated from the previous day’s closing balances</p></div><span class="cashbook-opening-badge">Calculated automatically</span></div>
+          <div id="cashbookOpeningBalances" class="cashbook-opening-grid"></div>
+        </section>
+        <div id="cashbookSummary" class="cashbook-summary"></div>
+        <div class="cashbook-halves">
+          <section class="cashbook-flow-panel cashbook-credit-panel"><div class="cashbook-flow-heading"><div><h3>Credit · Money In</h3><p class="panel-subtitle">Collections, deposits, and other receipts</p></div><strong id="cashbookCreditTotal"></strong></div><div id="cashbookCreditGroups" class="cashbook-groups"></div></section>
+          <section class="cashbook-flow-panel cashbook-debit-panel"><div class="cashbook-flow-heading"><div><h3>Debit · Money Out</h3><p class="panel-subtitle">Expenses, withdrawals, and other payments</p></div><strong id="cashbookDebitTotal"></strong></div><div id="cashbookDebitGroups" class="cashbook-groups"></div></section>
+        </div>
+        <section class="cashbook-closing-panel"><div><h3>Closing balances</h3><p id="cashbookClosingDateLabel" class="panel-subtitle"></p></div><div id="cashbookClosingBalances" class="cashbook-closing-grid"></div></section>
       </section>
     </section>
 
@@ -1329,6 +1399,7 @@
           <label>Billed<input name="billed" type="number" min="0" step="0.01"></label>
           <label>Cash<input name="cash" type="number" min="0" step="0.01"></label>
           <label>Bank<input name="bank" type="number" min="0" step="0.01"></label>
+          <label>Online account<select name="bankAccountId"></select></label>
           <label>Finance<input name="bajaj" type="number" min="0" step="0.01"></label>
           <label>Expense<input name="expense" type="number" min="0" step="0.01"></label>
           <label>Profit<input name="profit" type="number" step="0.01" ></label>
@@ -1465,6 +1536,7 @@
   <script src="js/pages/cheques.js"></script>
   <script src="js/pages/suppliers-purchases.js"></script>
   <script src="js/pages/accounts-manager.js"></script>
+  <script src="js/pages/cashbook.js"></script>
   <script src="js/pages/audit.js"></script>
   <script src="js/app.js"></script>
 </body>

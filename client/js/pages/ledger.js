@@ -224,6 +224,7 @@ function openTransactionEditor(index) {
   form.billed.value = decimal2(row.billed);
   form.cash.value = decimal2(row.cash);
   form.bank.value = decimal2(row.bank);
+  if (form.bankAccountId) form.bankAccountId.value = text(row.bankAccountId);
   form.bajaj.value = decimal2(row.bajaj);
   form.expense.value = decimal2(row.expense);
   form.profit.value = decimal2(row.profit);
@@ -294,6 +295,7 @@ function fillReceiptFormForEdit(row) {
   form.transportMode.value = text(tx.transportMode);
   form.cash.value = decimal2(row.cash);
   form.bank.value = decimal2(row.bank);
+  if (form.bankAccountId) form.bankAccountId.value = text(row.bankAccountId);
   form.bajaj.value = decimal2(row.bajaj);
   form.mode.value = text(row.type) || form.mode.value;
   form.remark.value = text(row.remark);
@@ -332,6 +334,7 @@ async function saveTransactionEdit(event) {
     billed: num(form.billed.value),
     cash: num(form.cash.value),
     bank: num(form.bank.value),
+    bankAccountId: num(form.bank.value) > 0 ? text(form.bankAccountId?.value) : "",
     bajaj: num(form.bajaj.value),
     expense: num(form.expense.value),
     profit: num(form.profit.value),

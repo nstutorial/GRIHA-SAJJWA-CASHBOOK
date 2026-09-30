@@ -310,6 +310,7 @@ async function saveReceipt(event) {
       billed: calc.net,
       cash: num(form.cash.value),
       bank: num(form.bank.value),
+      bankAccountId: num(form.bank.value) > 0 ? text(form.bankAccountId?.value) : "",
       expense: 0,
       type: text(form.mode.value),
       remark,
@@ -644,7 +645,7 @@ function gstBillPayload({ calc, customer, goodsTotals, items, previousDue, tx })
   return {
     profile,
     billTemplate: text(getSettingValue("billTemplate")) === "modern" ? "modern" : "classic",
-    account: accountDetails(),
+    account: cashbookAccountById(tx.bankAccountId || cashbookDefaultBankAccountId()) || accountDetails(),
     tx: billTx,
     customer: {
       id: text(customer.id),
@@ -836,6 +837,17 @@ function bindForms() {
   });
   $("#customerModalForm").stateCode.addEventListener("input", event => cleanStateCodeInput(event.target));
   $("#settingsForm").addEventListener("submit", withBusySubmit(saveSettings, "Saving..."));
+  $("#settingsBankAccountForm")?.addEventListener("submit", withBusySubmit(saveSettingsBankAccount, "Saving..."));
+  $("#settingsBankAccountForm")?.addEventListener("reset", () => setTimeout(() => { const form = $("#settingsBankAccountForm"); if (form) form.elements.namedItem("id").value = ""; }, 0));
+  $("#settingsDefaultBankAccount")?.addEventListener("change", withBusyControl($("#settingsDefaultBankAccount"), async event => {
+    const accountId = text(event.currentTarget.value);
+    await saveSettingValue("cashbookDefaultBankAccountId", accountId);
+    const account = cashbookAccountById(accountId);
+    if (account) await saveSettingValue("accountDetails", account);
+    fillAccountDetailsSettings();
+    renderCashbookBankAccountSelects();
+    toast("Default invoice account updated.");
+  }, "Saving..."));
   $("#gst2bRowDeleteEnabled")?.addEventListener("change", async event => {
     const checkbox = event.currentTarget;
     checkbox.disabled = true;
@@ -958,6 +970,7 @@ async function savePayment(event) {
       billed: 0,
       cash: cashReceived,
       bank: bankReceived,
+      bankAccountId: bankReceived > 0 ? text(f.bankAccountId?.value) : "",
       expense: 0,
       type: "Fund Received",
       remark: text(f.remark.value),
@@ -1006,6 +1019,7 @@ async function savePayment(event) {
     billed: 0,
     cash: cashReceived,
     bank: bankReceived,
+    bankAccountId: bankReceived > 0 ? text(f.bankAccountId?.value) : "",
     expense: expenseAmount,
     type: paymentType,
     remark: text(f.remark.value),

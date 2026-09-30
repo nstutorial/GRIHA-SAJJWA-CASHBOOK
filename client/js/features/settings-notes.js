@@ -433,12 +433,63 @@ function fillBusinessProfileSettings() {
 function fillAccountDetailsSettings() {
   const form = $("#settingsForm");
   if (!form) return;
-  const account = accountDetails();
-  form.accountBankName.value = account.bankName;
-  form.accountNumber.value = account.accountNumber;
-  form.accountIfsc.value = account.ifsc;
-  form.accountBranch.value = account.branch;
-  form.accountUpi.value = account.upi;
+  const accounts = cashbookBankAccounts();
+  const defaultId = cashbookDefaultBankAccountId();
+  const defaultSelect = $("#settingsDefaultBankAccount");
+  if (defaultSelect) {
+    defaultSelect.innerHTML = accounts.map(account => `<option value="${html(account.id)}">${html(account.name)}${account.bankName ? ` · ${html(account.bankName)}` : ""}</option>`).join("");
+    defaultSelect.value = defaultId;
+  }
+  const list = $("#settingsBankAccounts");
+  if (list) list.innerHTML = accounts.map(account => `
+    <article class="settings-bank-account">
+      <div><strong>${html(account.name)}</strong>${account.id === defaultId ? `<span class="head-chip-lock">Default for invoices</span>` : ""}<small>${html([account.bankName, account.accountNumber && `A/C ${account.accountNumber}`, account.ifsc && `IFSC ${account.ifsc}`, account.branch, account.upi].filter(Boolean).join(" · ") || "No bank details added")}</small></div>
+      <div class="settings-bank-account-actions"><button type="button" class="secondary" data-edit-bank-account="${html(account.id)}">Edit</button><button type="button" class="secondary" data-delete-bank-account="${html(account.id)}"${accounts.length <= 1 ? " disabled title=\"Keep at least one account\"" : ""}>Remove</button></div>
+    </article>`).join("") || `<p class="panel-subtitle">No bank accounts yet. Add an account to show it on invoices and receipt forms.</p>`;
+  $$('[data-edit-bank-account]', list || document).forEach(button => button.addEventListener("click", () => {
+    const account = cashbookAccountById(button.dataset.editBankAccount);
+    const editor = $("#settingsBankAccountForm");
+    if (!account || !editor) return;
+    ["id", "name", "bankName", "accountNumber", "ifsc", "branch", "upi"].forEach(key => { if (editor.elements.namedItem(key)) editor.elements.namedItem(key).value = account[key] || ""; });
+    editor.closest("details")?.setAttribute("open", "");
+    editor.name.focus();
+  }));
+  $$('[data-delete-bank-account]', list || document).forEach(button => button.addEventListener("click", () => withBusyControl(button, async () => {
+    const deletedId = button.dataset.deleteBankAccount;
+    const accounts = cashbookBankAccounts().filter(account => account.id !== deletedId);
+    if (!accounts.length) return toast("Keep at least one bank account.");
+    await saveSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY, accounts);
+    if (text(getSettingValue("cashbookDefaultBankAccountId")) === deletedId) {
+      await saveSettingValue("cashbookDefaultBankAccountId", accounts[0].id);
+      await saveSettingValue("accountDetails", accounts[0]);
+    }
+    fillAccountDetailsSettings();
+    renderCashbookBankAccountSelects();
+    toast("Bank account removed.");
+  }, "Removing...")));
+}
+
+async function saveSettingsBankAccount(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const accounts = cashbookBankAccounts();
+  const id = text(form.id.value) || `bank-${Date.now().toString(36)}`;
+  const account = { id, name: text(form.name.value), bankName: text(form.bankName.value), accountNumber: text(form.accountNumber.value), ifsc: text(form.ifsc.value), branch: text(form.branch.value), upi: text(form.upi.value) };
+  if (accounts.some(item => item.id !== id && item.name.toLowerCase() === account.name.toLowerCase())) return toast("An account with that name already exists.");
+  const index = accounts.findIndex(item => item.id === id);
+  if (index >= 0) accounts[index] = account;
+  else accounts.push(account);
+  await saveSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY, accounts);
+  if (text(getSettingValue("cashbookDefaultBankAccountId")) === id) await saveSettingValue("accountDetails", account);
+  if (!text(getSettingValue("cashbookDefaultBankAccountId"))) {
+    await saveSettingValue("cashbookDefaultBankAccountId", id);
+    await saveSettingValue("accountDetails", account);
+  }
+  form.reset();
+  form.closest("details")?.removeAttribute("open");
+  fillAccountDetailsSettings();
+  renderCashbookBankAccountSelects();
+  toast("Bank account saved.");
 }
 
 function localPendingCounts() {
@@ -943,11 +994,7 @@ async function saveSettings(event) {
     gstin: text(form.businessGstin.value)
   };
   const account = {
-    bankName: text(form.accountBankName.value),
-    accountNumber: text(form.accountNumber.value),
-    ifsc: text(form.accountIfsc.value),
-    branch: text(form.accountBranch.value),
-    upi: text(form.accountUpi.value)
+    ...(cashbookAccountById(form.defaultBankAccountId.value) || accountDetails())
   };
   const settings = {
     auto: form.receiptMemoAuto.checked,
@@ -962,7 +1009,9 @@ async function saveSettings(event) {
   try {
     saveStorageMode(form.localStorageMode?.checked ? "local" : "auto");
     await saveSettingValue("businessProfile", profile);
+    await saveSettingValue("cashbookDefaultBankAccountId", text(form.defaultBankAccountId.value));
     await saveSettingValue("accountDetails", account);
+    await saveSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY, cashbookBankAccounts());
     await saveSettingValue("billTemplate", form.billTemplate.value === "modern" ? "modern" : "classic");
     await saveSettingValue("receiptMemo", settings);
     await saveSettingValue("paymentMemo", paymentSettings);

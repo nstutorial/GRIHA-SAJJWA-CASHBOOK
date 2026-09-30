@@ -39,6 +39,8 @@ function renderSharedUi() {
   if (["payment", "settings"].includes(view)) renderPaymentHeads();
   if (["receipt", "payment", "cheques", "sales"].includes(view)) renderCustomerList();
   if (view === "payment") renderPaymentPartyList();
+  renderCashbookBankAccountSelects();
+  if (view === "settings") fillAccountDetailsSettings();
   if (view === "settings") renderHeadManagers();
   if (["chequeManagement", "purchases", "suppliers"].includes(view)) renderSupplierList();
   if (["receipt", "quotations", "purchases", "items", "sales"].includes(view)) renderItemList();
@@ -79,6 +81,9 @@ function renderCurrentView() {
       break;
     case "ledger":
       renderLedger();
+      break;
+    case "cashbook":
+      renderCashbook();
       break;
     case "accountsManager":
       renderAccountsManager();
@@ -300,6 +305,7 @@ async function init() {
   bindQuotationForms();
   bindFilters();
   bindAccountsManager();
+  bindCashbook();
   bindExports();
   addReceiptItem({ description: "SAMSUNG LED 24", hsn: "8517", qty: 1, gst: 18, total: 5800 });
   const business = { name: "G.S. STEEL FURNITURE", place: "Tufanganj, CoochBehar", state: "West Bengal", stateCode: "19", gstin: "19AATFG0007G1ZH" };

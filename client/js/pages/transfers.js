@@ -57,6 +57,7 @@ function transferRecordFromForm(form) {
     billed: 0,
     cash: values.cash,
     bank: values.bank,
+    bankAccountId: values.bank ? text(form.bankAccountId?.value) : "",
     expense: 0,
     type: label,
     remark: text(form.remark.value),
