@@ -1143,9 +1143,18 @@ h2 { font-size: 18px; }
 .gst-fy-comparison[hidden] { display: none; }
 .gst-fy-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .gst-fy-year { min-width: 0; margin: 10px 0; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--panel, #fff); }
-.gst-fy-year > summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; padding: 13px 15px; cursor: pointer; background: var(--soft); }
-.gst-fy-year-title { font-size: 16px; font-weight: 800; color: var(--brand); }
-.gst-fy-year-totals { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 12px; }
+.gst-fy-year > summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 22px; padding: 14px 16px; cursor: pointer; background: var(--soft); }
+.gst-fy-year-title { display: grid; gap: 3px; min-width: 150px; font-size: 18px; font-weight: 800; color: var(--brand); }
+.gst-fy-summary-label { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.gst-fy-year-totals { display: grid; grid-template-columns: repeat(3, minmax(155px, auto)); gap: 8px 18px; color: var(--ink); font-size: 13px; }
+.gst-fy-year-totals > span { display: grid; gap: 3px; }
+.gst-fy-year-totals small { color: var(--muted); font-size: 11px; font-weight: 700; }
+.gst-fy-year-totals strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.gst-fy-grand-total { display: grid; grid-template-columns: minmax(180px, 1.2fr) repeat(3, minmax(155px, 1fr)); align-items: center; gap: 12px 20px; margin: 14px 0 4px; padding: 16px; border: 2px solid var(--brand); border-radius: 9px; background: var(--soft); }
+.gst-fy-grand-total > strong { color: var(--brand); font-size: 16px; }
+.gst-fy-grand-total > div { display: grid; gap: 4px; }
+.gst-fy-grand-total small { color: var(--muted); font-size: 11px; font-weight: 700; }
+.gst-fy-grand-total b { font-size: 16px; font-variant-numeric: tabular-nums; }
 .gst-fy-table-wrap { display: block; width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; border: 1px solid var(--line); border-radius: 8px; }
 .gst-fy-table { width: max-content; min-width: 1580px; max-width: none; table-layout: fixed; border-collapse: collapse; border: 0; margin: 0; }
 .gst-fy-table th, .gst-fy-table td { white-space: nowrap; border: 1px solid var(--line); }
@@ -1158,6 +1167,7 @@ h2 { font-size: 18px; }
 .gst-fy-table .gst-fy-gstr2b-heading { background: #285b91; }
 .gst-fy-table .gst-fy-difference-heading { background: #8a5b12; }
 .gst-fy-total { font-weight: 800; background: color-mix(in srgb, #e0aa35 14%, var(--panel, #fff)); }
+.gst-fy-table .gst-fy-total, .gst-fy-document-table .gst-fy-total { border-left: 2px solid #9a6a13; border-right: 2px solid #9a6a13; }
 .gst-fy-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--soft) 55%, transparent); }
 .gst-fy-table tbody td:first-child { min-width: 210px; }
 .gst-fy-month-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 2px 0; border: 0; background: transparent; color: var(--brand); font: inherit; font-weight: 750; text-align: left; cursor: pointer; }
@@ -1179,7 +1189,7 @@ h2 { font-size: 18px; }
 .gst-fy-status { color: var(--muted); font-size: 12px; }
 .gst-fy-difference { font-weight: 750; }
 .gst-fy-table tfoot th, .gst-fy-table tfoot td { position: static; background: var(--soft); font-weight: 800; }
-@media (max-width: 860px) { .gst-fy-documents { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 860px) { .gst-fy-documents { grid-template-columns: minmax(0, 1fr); } .gst-fy-year-totals { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); width: 100%; } .gst-fy-grand-total { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .create-user-form { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)) auto; align-items: end; gap: 10px; margin: 12px 0 18px; }
 @media (max-width: 900px) { .create-user-form { grid-template-columns: repeat(2, minmax(130px, 1fr)); } }
 @media (max-width: 560px) { .create-user-form { grid-template-columns: 1fr; } }
