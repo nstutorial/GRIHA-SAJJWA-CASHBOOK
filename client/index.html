@@ -6,9 +6,9 @@
   <title>G.S. Steel Furniture Cashbook</title>
   <link rel="stylesheet" href="css/styles.css">
   <style>
-    .gst-report-tabs { display: flex; gap: 8px; margin: 18px 0 0; border-bottom: 1px solid #d1d5db; }
-    .gst-report-tabs button { border-radius: 6px 6px 0 0; }
-    .gst-report-tabs button.active { background: #165f4c; color: #fff; border-bottom: 3px solid #e0aa35; }
+    .gst-report-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; border-bottom: 1px solid #d1d5db; min-width: 0; }
+    .gst-report-tabs button { border-radius: 6px 6px 0 0; white-space: normal; }
+    .gst-report-tabs button.active { background: #0e7490; color: #fff; border-bottom: 3px solid #e0aa35; box-shadow: 0 3px 0 #0e7490; font-weight: 800; }
     .gst2b-supplier-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 2px 0; border: 0; background: transparent; color: var(--brand); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
     .gst2b-supplier-toggle:hover { text-decoration: underline; }
     .gst2b-supplier-arrow { width: 14px; flex: 0 0 14px; text-align: center; }
@@ -389,7 +389,12 @@
         </details>
         <div id="gstReturnsKpis" class="sales-kpi-grid"></div>
         <p id="gstReturnsReportContext" class="gst-report-context" aria-live="polite"></p>
-        <div class="report-tabs gst-report-tabs"><button type="button" data-gst-report-tab="gstr1" class="active" aria-pressed="true">GSTR-1</button><button type="button" data-gst-report-tab="gstr1-imported" aria-pressed="false">GSTR-1 (IMPORTED)</button><button type="button" data-gst-report-tab="gstr3b" aria-pressed="false">GSTR-3B Working</button><button type="button" data-gst-report-tab="gstr3b-filed" aria-pressed="false">Filed GSTR-3B</button><button type="button" data-gst-report-tab="hsn" aria-pressed="false">HSN Summary</button><button type="button" data-gst-report-tab="itc" aria-pressed="false">Eligible ITC</button><button type="button" data-gst-report-tab="reconciliation" aria-pressed="false">GSTR-2B Match</button><button type="button" data-gst-report-tab="supplier-summary" aria-pressed="false">GSTR-2B Suppliers</button></div>
+        <div class="report-tabs gst-report-tabs"><button type="button" data-gst-report-tab="gstr1" class="active" aria-pressed="true">GSTR-1</button><button type="button" data-gst-report-tab="gstr1-imported" aria-pressed="false">GSTR-1 (IMPORTED)</button><button type="button" data-gst-report-tab="fy-comparison" aria-pressed="false">FY GSTR-1 vs GSTR-2B</button><button type="button" data-gst-report-tab="gstr3b" aria-pressed="false">GSTR-3B Working</button><button type="button" data-gst-report-tab="gstr3b-filed" aria-pressed="false">Filed GSTR-3B</button><button type="button" data-gst-report-tab="hsn" aria-pressed="false">HSN Summary</button><button type="button" data-gst-report-tab="itc" aria-pressed="false">Eligible ITC</button><button type="button" data-gst-report-tab="reconciliation" aria-pressed="false">GSTR-2B Match</button><button type="button" data-gst-report-tab="supplier-summary" aria-pressed="false">GSTR-2B Suppliers</button></div>
+        <section id="gstFyComparison" class="gst-fy-comparison" hidden>
+          <p class="panel-subtitle">All uploaded financial years. Monthly difference is imported GSTR-1 minus GSTR-2B. Expand a month to inspect its source documents. Quarterly GSTR-1 totals appear in the quarter-ending month because the imported return provides no reliable monthly split.</p>
+          <div class="gst-fy-actions"><button type="button" class="secondary" id="gstFyExpandAll">Expand all years</button><button type="button" class="secondary" id="gstFyCollapseAll">Collapse all years</button></div>
+          <div id="gstFyComparisonGroups"></div>
+        </section>
         <div id="gst2bSupplierControls" class="gst2b-supplier-controls" hidden>
           <label>Find supplier<input id="gst2bSupplierSearch" type="search" placeholder="Supplier name or GSTIN" autocomplete="off"></label>
           <button id="gst2bExpandAllBtn" class="secondary" type="button">Expand all</button>

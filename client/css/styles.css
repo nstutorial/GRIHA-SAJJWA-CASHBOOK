@@ -1137,6 +1137,49 @@ h2 { font-size: 18px; }
 .cashbook-reconcile-controls label { min-width: 220px; }
 .cashbook-match-yes { color: #147044; }
 .cashbook-match-no { color: #a13f28; }
+.gst-returns-panel { min-width: 0; overflow: hidden; }
+.gst-returns-panel .table-wrap { max-width: 100%; overscroll-behavior-x: contain; }
+.gst-fy-comparison { min-width: 0; margin-top: 14px; }
+.gst-fy-comparison[hidden] { display: none; }
+.gst-fy-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.gst-fy-year { min-width: 0; margin: 10px 0; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--panel, #fff); }
+.gst-fy-year > summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 18px; padding: 13px 15px; cursor: pointer; background: var(--soft); }
+.gst-fy-year-title { font-size: 16px; font-weight: 800; color: var(--brand); }
+.gst-fy-year-totals { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 12px; }
+.gst-fy-table-wrap { display: block; width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; border: 1px solid var(--line); border-radius: 8px; }
+.gst-fy-table { width: max-content; min-width: 1580px; max-width: none; table-layout: fixed; border-collapse: collapse; border: 0; margin: 0; }
+.gst-fy-table th, .gst-fy-table td { white-space: nowrap; border: 1px solid var(--line); }
+.gst-fy-table thead th { text-align: center; vertical-align: middle; }
+.gst-fy-table .gst-fy-month-heading { min-width: 210px; text-align: left; background: var(--brand); color: #fff; }
+.gst-fy-table col.gst-fy-month-col { width: 210px; }
+.gst-fy-table col.gst-fy-value-col { width: 116px; }
+.gst-fy-table .gst-fy-group-heading { color: #fff; font-weight: 800; }
+.gst-fy-table .gst-fy-gstr1-heading { background: #176b57; }
+.gst-fy-table .gst-fy-gstr2b-heading { background: #285b91; }
+.gst-fy-table .gst-fy-difference-heading { background: #8a5b12; }
+.gst-fy-total { font-weight: 800; background: color-mix(in srgb, #e0aa35 14%, var(--panel, #fff)); }
+.gst-fy-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--soft) 55%, transparent); }
+.gst-fy-table tbody td:first-child { min-width: 210px; }
+.gst-fy-month-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 2px 0; border: 0; background: transparent; color: var(--brand); font: inherit; font-weight: 750; text-align: left; cursor: pointer; }
+.gst-fy-month-toggle:hover { text-decoration: underline; }
+.gst-fy-month-arrow { display: inline-block; width: 14px; transition: transform .15s ease; }
+.gst-fy-month-toggle[aria-expanded="true"] .gst-fy-month-arrow { transform: rotate(90deg); }
+.gst-fy-month-detail-row[hidden] { display: none; }
+.gst-fy-month-detail-row > td { padding: 14px; white-space: normal; background: var(--soft); }
+.gst-fy-documents { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; width: 100%; min-width: 0; padding: 0; }
+.gst-fy-documents > section { width: 100%; min-width: 0; }
+.gst-fy-documents h4 { margin: 0 0 8px; }
+.gst-fy-document-wrap { min-width: 0; overflow-x: auto; }
+.gst-fy-document-table { width: 100%; min-width: 900px; background: var(--panel, #fff); border-collapse: collapse; border: 1px solid var(--line); }
+.gst-fy-document-table th, .gst-fy-document-table td { border: 1px solid var(--line); white-space: nowrap; }
+.gst-fy-document-table thead th { background: var(--brand); color: #fff; }
+.gst-fy-document-table tbody tr:nth-child(even) td { background: var(--soft); }
+.gst-fy-document-table tfoot th, .gst-fy-document-table tfoot td { position: static; background: var(--soft); font-weight: 800; }
+.gst-fy-document-table th { position: static; }
+.gst-fy-status { color: var(--muted); font-size: 12px; }
+.gst-fy-difference { font-weight: 750; }
+.gst-fy-table tfoot th, .gst-fy-table tfoot td { position: static; background: var(--soft); font-weight: 800; }
+@media (max-width: 860px) { .gst-fy-documents { grid-template-columns: minmax(0, 1fr); } }
 .create-user-form { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)) auto; align-items: end; gap: 10px; margin: 12px 0 18px; }
 @media (max-width: 900px) { .create-user-form { grid-template-columns: repeat(2, minmax(130px, 1fr)); } }
 @media (max-width: 560px) { .create-user-form { grid-template-columns: 1fr; } }
