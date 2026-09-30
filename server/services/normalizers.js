@@ -16,6 +16,7 @@ function normalizeTransaction(row) {
     billed: num(row["Billed Amount"] ?? row.billed),
     cash: num(row["Received by CASH"] ?? row.cash),
     bank: num(row["Received by BANK"] ?? row.bank),
+    bankAccountId: text(row.bankAccountId ?? row.bank_account_id),
     expense: num(row["Expense Amount"] ?? row.expense),
     type: text(row["Trnasaction Type"] ?? row["Transaction Type"] ?? row.type),
     remark: text(row["Goods Details"] ?? row.Remarks ?? row.remark ?? row.voucherData?.tx?.remark),

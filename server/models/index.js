@@ -19,6 +19,7 @@ const transactionSchema = new mongoose.Schema({
   billed: Number,
   cash: Number,
   bank: Number,
+  bankAccountId: String,
   expense: Number,
   type: String,
   remark: String,
