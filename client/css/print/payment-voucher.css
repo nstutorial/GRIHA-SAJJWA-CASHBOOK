@@ -1,0 +1,205 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --border: #6b7280;
+  --soft-border: #cbd5e1;
+  --fill: #f8fafc;
+  --muted: #4b5563;
+}
+
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #111;
+  background: #f3f4f6;
+}
+
+.toolbar {
+  max-width: 820px;
+  margin: 0 auto 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+button {
+  border: 0;
+  border-radius: 6px;
+  padding: 10px 14px;
+  background: #165f4c;
+  color: #fff;
+  cursor: pointer;
+}
+
+.voucher {
+  max-width: 820px;
+  margin: 0 auto;
+  border: 1.5px solid var(--border);
+  background: #fff;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.voucher-title {
+  padding: 10px;
+  border-bottom: 1.5px solid var(--border);
+  background: var(--fill);
+  text-align: center;
+  font-size: 18px;
+  text-transform: uppercase;
+}
+
+.voucher-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.voucher-top h1 {
+  font-size: 26px;
+}
+
+.muted {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.voucher-meta {
+  min-width: 220px;
+  text-align: right;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.paid-block {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.paid-to,
+.amount-box {
+  padding: 16px 20px;
+}
+
+.amount-box {
+  border-left: 1.5px solid var(--border);
+  background: #fbfdff;
+}
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.paid-to strong {
+  font-size: 18px;
+}
+
+.amount-box strong {
+  display: block;
+  font-size: 24px;
+  text-align: right;
+}
+
+.details {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.details th,
+.details td {
+  padding: 10px 12px;
+  border: 1px solid var(--soft-border);
+  text-align: left;
+}
+
+.details th {
+  width: 28%;
+  background: var(--fill);
+  color: #374151;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.amount-words,
+.declaration {
+  padding: 14px 20px;
+  border-top: 1px solid var(--soft-border);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sign {
+  display: flex;
+  justify-content: space-between;
+  padding: 42px 20px 18px;
+  border-top: 1.5px solid var(--border);
+  font-size: 13px;
+}
+
+.missing {
+  max-width: 760px;
+  margin: 60px auto;
+  padding: 24px;
+  border: 1px solid var(--soft-border);
+  border-radius: 8px;
+  background: #fff;
+  text-align: center;
+}
+
+@media print {
+  body {
+    padding: 0;
+    background: #fff;
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .voucher {
+    max-width: none;
+    border-width: 1px;
+  }
+}
+
+@media (max-width: 680px) {
+  body {
+    padding: 12px;
+  }
+
+  .voucher-top,
+  .paid-block {
+    grid-template-columns: 1fr;
+  }
+
+  .voucher-top {
+    display: grid;
+  }
+
+  .voucher-meta {
+    text-align: left;
+  }
+
+  .amount-box {
+    border-left: 0;
+    border-top: 1.5px solid var(--border);
+  }
+}

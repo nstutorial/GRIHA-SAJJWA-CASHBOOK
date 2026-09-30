@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GST Bill</title>
+  <link rel="stylesheet" href="css/print/bill.css">
+  <link rel="stylesheet" href="css/print/modern-tax-invoice.css">
+</head>
+<body>
+  <div class="toolbar">
+    <label class="print-option">
+      <input id="noPrintOthersToggle" type="checkbox" checked>
+      No print Others Details Section
+    </label>
+    <label class="print-option">
+      <input id="noPrintDuesToggle" type="checkbox">
+      No print Due Details
+    </label>
+    <label class="print-option">
+      <input id="hideCustomerIdToggle" type="checkbox" checked>
+      Hide customer ID from Bill To / Ship To
+    </label>
+    <label class="print-option">
+      <input id="hideReceivedToggle" type="checkbox">
+      Hide Received amount
+    </label>
+    <button type="button" onclick="window.print()">Print GST Bill</button>
+  </div>
+  <main id="billRoot"></main>
+  <script src="js/print/modern-tax-invoice.js"></script>
+  <script src="js/print/bill.js"></script>
+</body>
+</html>

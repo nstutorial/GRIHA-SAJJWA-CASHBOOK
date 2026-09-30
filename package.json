@@ -1,0 +1,20 @@
+{
+  "name": "gs-steel-cashbook",
+  "version": "1.0.0",
+  "private": true,
+  "description": "G.S. Steel Furniture cashbook website with MongoDB backend.",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "seed": "node server/scripts/seed-mongo.js",
+    "check": "node --check server/server.js && node --check server/api/index.js && node --check server/config/db.js && node --check server/middleware/auth.js && node --check server/models/index.js && node --check server/routes/action-lock.js && node --check server/routes/auth.js && node --check server/routes/bootstrap.js && node --check server/routes/collections.js && node --check server/services/audit.js && node --check server/services/normalizers.js && node --check server/services/records.js && node --check server/utils/data.js && node --check server/scripts/seed-mongo.js && node --check client/js/core/state.js && node --check client/js/core/api-auth.js && node --check client/js/components/ui.js && node --check client/js/pages/dashboard-sales.js && node --check client/js/pages/transfers.js && node --check client/js/features/settings-notes.js && node --check client/js/features/receipts-forms.js && node --check client/js/pages/ledger.js && node --check client/js/pages/dues.js && node --check client/js/pages/customers-items.js && node --check client/js/pages/cheques.js && node --check client/js/pages/suppliers-purchases.js && node --check client/js/pages/audit.js && node --check client/js/print/bill.js && node --check client/js/print/payment-voucher.js && node --check client/js/print/cheque-voucher.js && node --check client/js/app.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "mongoose": "^8.23.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

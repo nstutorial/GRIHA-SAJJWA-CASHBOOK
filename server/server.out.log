@@ -1,0 +1,6 @@
+
+> gs-steel-cashbook@1.0.0 start
+> node server/server.js
+
+G.S. Steel Furniture app running at http://127.0.0.1:5000/
+MongoDB: mongodb+srv://nsutradharcob:Skyview123@cluster0.lqkza.mongodb.net/CASHBOOK_GS?retryWrites=true&w=majority&appName=Cluster0

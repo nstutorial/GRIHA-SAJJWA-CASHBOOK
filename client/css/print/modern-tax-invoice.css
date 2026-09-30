@@ -1,0 +1,59 @@
+* { box-sizing: border-box; }
+.modern-tax-invoice { max-width: 1080px; margin: 0 auto; border: 1px solid #333; background: #fff; color: #111; font-family: Arial, Helvetica, sans-serif; }
+.modern-header { display: grid; grid-template-columns: 230px 1fr; min-height: 170px; border-bottom: 2px solid #5145b5; }
+.modern-label { align-self: start; margin: 28px 0 0 24px; padding: 14px 16px; color: #fff; background: #5145b5; font-size: 25px; font-weight: 800; }
+.modern-profile { padding: 30px 24px 18px; }
+.modern-profile h1 { margin: 0 0 12px; color: #5145b5; font-size: 28px; }
+.modern-profile p { margin: 5px 0; font-size: 13px; line-height: 1.35; }
+.modern-meta { display: grid; grid-template-columns: 1fr 1fr 2fr; border-bottom: 1px solid #333; }
+.modern-meta > div { display: flex; flex-direction: column; gap: 7px; min-height: 80px; padding: 14px; border-right: 1px solid #999; font-size: 13px; }
+.modern-meta > div:last-child { border-right: 0; }
+.modern-meta span, .modern-notes h3 { color: #5145b5; font-weight: 700; }
+.modern-bill-to small { font-size: 11px; }
+.modern-items { width: 100%; border-collapse: collapse; }
+.modern-items th, .modern-items td { border: 1px solid #333; padding: 8px 6px; font-size: 11px; vertical-align: top; }
+.modern-items thead th, .modern-items tfoot th { color: #fff; background: #5145b5; text-align: center; }
+.modern-items tfoot th { text-align: left; }
+.modern-items .num { text-align: right; white-space: nowrap; }
+.modern-summary { display: grid; grid-template-columns: 1fr 360px; gap: 22px; padding: 16px; }
+.modern-notes { font-size: 12px; line-height: 1.45; }
+.modern-notes h3 { margin: 8px 0 4px; font-size: 14px; }
+.modern-notes p { margin: 5px 0; }
+.modern-totals { align-self: start; border: 1px solid #333; }
+.modern-totals > div { display: flex; justify-content: space-between; gap: 18px; padding: 8px 10px; border-bottom: 1px solid #aaa; font-size: 13px; }
+.modern-totals .modern-grand { color: #fff; background: #5145b5; border-bottom: 0; font-size: 18px; font-weight: 800; }
+.modern-signature { margin-top: 38px; text-align: center; }
+.account-box { margin-top: 12px; padding: 8px; border: 1px solid #aaa; font-size: 11px; }
+.account-box h3 { margin: 0 0 4px; color: #5145b5; font-size: 12px; }
+@media print {
+  body { padding: 0; background: #fff; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .modern-tax-invoice,
+  .modern-header,
+  .modern-label,
+  .modern-profile,
+  .modern-profile p,
+  .modern-meta,
+  .modern-bill-to small,
+  .modern-items,
+  .modern-items th,
+  .modern-items td,
+  .modern-items tfoot th,
+  .modern-notes,
+  .modern-notes p,
+  .modern-totals,
+  .modern-totals > div,
+  .modern-totals > div:not(.modern-grand) { color: #000; }
+  .modern-tax-invoice,
+  .modern-header,
+  .modern-label,
+  .modern-profile,
+  .modern-meta,
+  .modern-items th,
+  .modern-items td,
+  .modern-items tfoot th,
+  .modern-totals,
+  .modern-totals > div,
+  .modern-totals .modern-grand,
+  .account-box { background: #fff !important; color: #000 !important; }
+  .modern-tax-invoice { max-width: none; }
+}

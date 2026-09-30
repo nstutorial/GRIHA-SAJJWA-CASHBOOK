@@ -1,0 +1,17 @@
+{
+  "name": "gs-steel-cashbook",
+  "version": "1.0.0",
+  "private": true,
+  "description": "G.S. Steel Furniture cashbook website with MongoDB backend.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node scripts/seed-mongo.js",
+    "check": "node --check server.js && node --check config/db.js && node --check ../client/js/app.js && node --check scripts/seed-mongo.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "mongoose": "^8.23.1"
+  }
+}

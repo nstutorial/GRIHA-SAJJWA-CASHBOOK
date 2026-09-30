@@ -1,0 +1,1471 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>G.S. Steel Furniture Cashbook</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .gst-report-tabs { display: flex; gap: 8px; margin: 18px 0 0; border-bottom: 1px solid #d1d5db; }
+    .gst-report-tabs button { border-radius: 6px 6px 0 0; }
+    .gst-report-tabs button.active { background: #165f4c; color: #fff; border-bottom: 3px solid #e0aa35; }
+    .gst2b-supplier-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 2px 0; border: 0; background: transparent; color: var(--brand); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+    .gst2b-supplier-toggle:hover { text-decoration: underline; }
+    .gst2b-supplier-arrow { width: 14px; flex: 0 0 14px; text-align: center; }
+    .gst2b-bills-row > td { padding: 0; background: var(--soft); }
+    .gst2b-bills-wrap { overflow-x: auto; padding: 8px 12px 12px; }
+    .gst2b-bills-table { min-width: 920px; background: var(--panel); }
+    .gst2b-bills-table th { position: static; font-size: 11px; }
+    .gst2b-bills-table th, .gst2b-bills-table td { padding: 7px 9px; }
+    .gst2b-supplier-controls { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+    .gst2b-supplier-controls[hidden] { display: none; }
+    .gst2b-supplier-controls label { min-width: min(100%, 280px); }
+    .gst2b-supplier-controls button { min-height: 40px; }
+    .gst2b-supplier-count { align-self: center; color: var(--muted); font-size: 13px; }
+    .gst-overview-filters { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .gst-overview-filters label { min-width: 150px; }
+    .gst-overview-range { align-self: center; margin: 0; color: var(--muted); font-size: 13px; }
+    .gst-returns-filters label[hidden], .sales-dashboard-filters label[hidden], .date-range-filters label[hidden], .date-range-filters input[hidden] { display: none; }
+    .gst-report-context { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--soft); color: var(--muted); font-size: 13px; }
+    .gst-import-disclosure { margin: 10px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .gst-import-disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; color: var(--ink); font-size: 14px; font-weight: 700; list-style: none; cursor: pointer; }
+    .gst-import-disclosure > summary::-webkit-details-marker { display: none; }
+    .gst-import-chevron { width: 9px; height: 9px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .15s ease; }
+    .gst-import-disclosure[open] .gst-import-chevron { transform: rotate(225deg); }
+    .gst-import-fields { margin: 0; padding: 0 14px 14px; }
+    .gst-uploaded-periods-modal { width: min(900px, 100%); }
+    .gst-uploaded-period-summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .gst-uploaded-period-summary .total-card { flex: 1 1 150px; }
+    .gst-uploaded-period-link { padding: 0; border: 0; background: transparent; color: var(--brand); font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+    .gst-imported-groups { margin: 0 0 12px; }
+    .gst-imported-view-tabs { display: flex; gap: 8px; margin: 8px 0 12px; }
+    .gst-imported-view-tabs button.active { background: #165f4c; color: #fff; }
+    .gst-imported-group { margin: 7px 0; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+    .gst-imported-group > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--soft); list-style: none; cursor: pointer; }
+    .gst-imported-group > summary::-webkit-details-marker { display: none; }
+    .gst-imported-group-title { color: var(--brand); font-weight: 700; }
+    .gst-imported-group-meta { color: var(--muted); font-size: 12px; }
+    .gst-imported-group-content { overflow-x: auto; }
+    .gst-imported-group-content table { min-width: 800px; }
+    .gst-overview-section { margin-top: 20px; }
+    .gst-overview-section h3 { margin: 0 0 10px; font-size: 16px; }
+    .gst-overview-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .gst-overview-caveat { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <section class="auth-view" id="authView" hidden>
+    <div class="auth-card">
+      <div class="auth-brand">
+        <span class="mark">GS</span>
+        <div>
+          <strong>G.S. Steel Furniture</strong>
+          <small>Cashbook secure access</small>
+        </div>
+      </div>
+      <div class="auth-head">
+        <h1 id="authTitle">Login</h1>
+        <p id="authSubtitle">Login to open your cashbook.</p>
+      </div>
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-auth-mode="login">Login</button>
+        <button type="button" class="auth-tab" data-auth-mode="signup">Signup</button>
+      </div>
+      <form id="loginForm" class="auth-form" autocomplete="off">
+        <label>Username<input name="username" required placeholder="admin"></label>
+        <label>Password<input name="password" type="password" required placeholder="Password"></label>
+        <button type="submit">Login</button>
+      </form>
+      <form id="signupForm" class="auth-form" autocomplete="off" hidden>
+        <label>Name<input name="name" required placeholder="Your name"></label>
+        <label>Username<input name="username" required placeholder="admin"></label>
+        <label>Password<input name="password" type="password" minlength="6" required placeholder="Minimum 6 characters"></label>
+        <label>Confirm Password<input name="confirmPassword" type="password" minlength="6" required placeholder="Retype password"></label>
+        <button type="submit">Create account</button>
+      </form>
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <button class="sidebar-close" id="closeSidebarBtn" type="button" aria-label="Close menu">x</button>
+    <div class="brand">
+      <span class="mark" id="brandMark">GS</span>
+      <div>
+        <strong id="brandName">G.S. Steel Furniture</strong>
+        <small id="brandSubtitle">Cashbook and billing</small>
+      </div>
+      <button class="theme-toggle" id="themeToggleBtn" type="button" aria-label="Switch to dark theme" title="Switch theme">
+        <span aria-hidden="true">☾</span>
+      </button>
+    </div>
+    <nav class="nav" aria-label="Main navigation">
+      <button class="active" data-view="dashboard">Dashboard</button>    
+      <button data-view="receipt">Receipt / Invoice</button>
+      <button data-view="quotations">Business Quotations</button>
+      <button data-view="payment">Payment Voucher</button>
+      <button data-view="transfers">Balance Transfer</button>
+      <button data-view="ledger">Transaction Ledger</button>
+      <button data-view="accountsManager">Accounts Manager</button>
+      <button data-view="dues">Due Register</button>
+      <button data-view="customers">Address Book</button>
+      <button data-view="cheques">Cheque DropBox</button>
+      <button data-view="chequeManagement">Cheque Management</button>
+      <button data-view="suppliers">Supplier Management</button>
+      <button data-view="items">Items Management</button>
+      <button data-view="purchases">Purchases</button>
+        <button data-view="sales">Sales Dashboard</button>
+      <button data-view="gstOverview">GST Overview</button>
+        <button data-view="tallyGstCompare">Tally vs GST</button>
+      <button data-view="gstReturns">GST Returns</button>
+      <button data-view="audit">Edit / Delete History</button>
+      <button data-view="settings">Settings</button>
+    </nav>
+    <div class="sidebar-footer">
+      <button id="logoutBtn" class="secondary" type="button">Logout</button>
+      <button id="exportAllBtn" class="secondary">Export backup</button>
+      <label class="import-btn">
+        Import backup
+        <input id="importBackup" type="file" accept="application/json">
+      </label>
+    </div>
+  </aside>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
+
+  <main class="shell">
+    <header class="topbar">
+      <button class="menu-toggle" id="openSidebarBtn" type="button" aria-label="Open menu">☰</button>
+      <div>
+        <h1 id="viewTitle">Dashboard</h1>
+        <p id="viewSubtitle">Daily cash, bank, sales, dues, and cheque status.</p>
+      </div>
+      <div class="topbar-actions">
+        <button class="secondary" id="pageRefreshBtn" type="button">Refresh page</button>
+        <div class="date-chip" id="todayChip"></div>
+      </div>
+    </header>
+
+    <section id="dashboard" class="view active">
+      <div class="dashboard-toolbar">
+        <div>
+          <strong>Server refresh</strong>
+          <span id="dashboardRefreshStatus">Ready to sync local data and fetch MongoDB records.</span>
+        </div>
+        <button id="dashboardRefreshBtn" type="button">Refresh</button>
+      </div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="panel-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Today</h2>
+            <button class="secondary" data-view-jump="receipt">New receipt</button>
+          </div>
+          <div id="todayBreakdown" class="summary-list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Cash denominations</h2>
+            <button class="secondary" id="clearNotesBtn">Clear</button>
+          </div>
+          <form autocomplete="off" id="notesForm" class="notes-form">
+            <div class="notes-meta">
+              <label>Date<input name="date" type="date" required></label>
+              <label >Title<input name="title" value="Cash notes"></label>
+              <label>Add denomination<input id="newDenominationInput" type="number" min="1" step="1" placeholder="5000"></label>
+              <button
+                type="button"
+                class="secondary add-note-btn"
+                id="addDenominationBtn"
+                style="background-color:#006400; color:white; width:80px; padding:8px 12px; border:none; border-radius:4px;">
+                Add
+            </button>
+            </div>
+            <div class="table-wrap">
+              <table id="denominationSummary" class="denom-table"></table>
+            </div>
+            <div class="note-total">
+              <span>Total cash from notes</span>
+              <strong id="notesTotal">₹0</strong>
+              <input name="remark" placeholder="Remark">
+            </div>
+            <div class="actions">
+              <button type="submit">Save notes details</button>
+            </div>
+          </form>
+        </section>
+      </div>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Saved notes details</h2>
+          <button class="secondary" id="exportNotesBtn">Export CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table id="notesTable"></table>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Recent transactions</h2>
+          <button class="secondary" data-view-jump="ledger">Open ledger</button>
+        </div>
+        <div class="filters recent-filters">
+          <input id="recentSearch" placeholder="Search memo, party, mobile, remark">
+        </div>
+        <div class="table-wrap">
+          <table id="recentTransactions"></table>
+        </div>
+      </section>
+    </section>
+
+    <section id="gstOverview" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <div><h2>GST Overview</h2><p class="panel-subtitle">Compare sales books, purchase records, GSTR-2B and reconciliation exceptions.</p></div>
+        </div>
+        <div class="gst-overview-filters">
+          <label>Period<select id="gstOverviewPeriod"><option value="all">All years</option><option value="fy">Financial year</option><option value="quarter">Quarter</option><option value="month">Month</option></select></label>
+          <label id="gstOverviewFinancialYearLabel">Financial year<select id="gstOverviewFinancialYear"></select></label>
+          <label id="gstOverviewQuarterLabel" hidden>Quarter<select id="gstOverviewQuarter"><option value="1">Apr - Jun</option><option value="2">Jul - Sep</option><option value="3">Oct - Dec</option><option value="4">Jan - Mar</option></select></label>
+          <label id="gstOverviewMonthLabel" hidden>Month<input id="gstOverviewMonth" type="month"></label>
+          <p id="gstOverviewRangeLabel" class="gst-overview-range" aria-live="polite">All available dates</p>
+        </div>
+        <div id="gstOverviewKpis" class="sales-kpi-grid"></div>
+        <section class="gst-overview-section">
+          <h3>Books and GSTN Comparison</h3>
+          <div class="table-wrap"><table id="gstOverviewSourceTable"></table></div>
+          <h3>Stock Value and Available ITC</h3>
+          <div class="table-wrap"><table id="gstOverviewItcStockTable"></table></div>
+          <p class="gst-overview-caveat">GSTR-2B available ITC uses imported invoice rows marked ITC available; re-import older statements to include eligibility flags. Current stock value is stock balance multiplied by the item-master rate and is not period-filtered. GSTR-2B does not report stock value. Verify ITC eligibility before filing.</p>
+        </section>
+        <section class="gst-overview-section">
+          <h3>Reconciliation Exceptions</h3>
+          <div class="table-wrap"><table id="gstOverviewExceptionsTable"></table></div>
+          <div class="gst-overview-actions">
+            <button type="button" class="secondary" data-gst-overview-report="reconciliation">Open GSTR-2B Match</button>
+            <button type="button" class="secondary" data-gst-overview-report="itc">Review Eligible ITC</button>
+            <button type="button" class="secondary" data-gst-overview-report="supplier-summary">View GSTR-2B Suppliers</button>
+            <button type="button" class="secondary" data-gst-overview-report="gstr3b">View GSTR-3B Working</button>
+          </div>
+        </section>
+      </section>
+    </section>
+
+    <section id="tallyGstCompare" class="view">
+      <section class="panel gst-returns-panel">
+        <div class="panel-head">
+          <div><h2>Tally vs GST Comparison</h2><p class="panel-subtitle">Compare book sales with imported GSTR-1 returns, purchases with GSTR-2B, and totals with filed GSTR-3B.</p></div>
+          <div class="gst-overview-actions">
+            <button id="tallyGstCompareExport" class="secondary" type="button">Export CSV</button>
+            <button id="tallyGstOpenReturns" class="secondary" type="button">Open GST Returns</button>
+          </div>
+        </div>
+        <div class="gst-overview-filters">
+          <label>Period<select id="tallyGstPeriod"><option value="month">Month</option><option value="quarter">Quarter</option><option value="fy">Financial year</option><option value="all">All available dates</option></select></label>
+          <label id="tallyGstMonthLabel">Month / quarter anchor<input id="tallyGstMonth" type="month"></label>
+          <label id="tallyGstFinancialYearLabel" hidden>Financial year<select id="tallyGstFinancialYear"></select></label>
+          <p id="tallyGstRangeLabel" class="gst-overview-range" aria-live="polite"></p>
+        </div>
+        <div class="filters gst-returns-filters">
+          <label>Tally Sales Register<input id="tallySalesFile" type="file" accept=".csv,.xlsx,.xls,.json,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+          <button id="importTallySalesBtn" type="button">Import sales</button>
+          <span id="tallySalesStatus" class="panel-subtitle" role="status" aria-live="polite">Import a Tally sales register to compare outward taxable value and tax with filed GSTR-3B.</span>
+        </div>
+        <div class="filters gst-returns-filters">
+          <label>Tally Purchase Register<input id="tallyPurchasesFile" type="file" accept=".csv,.xlsx,.xls,.json,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+          <button id="importTallyPurchasesBtn" type="button">Import purchases</button>
+          <span id="tallyPurchasesStatus" class="panel-subtitle" role="status" aria-live="polite">Import a Tally purchase register to match invoices, compare tax, and reconcile with GSTR-2B.</span>
+        </div>
+        <p class="gst-overview-caveat">Imported Tally registers are kept separate from cashbook records and replace the previous import of the same type. Until imported, book comparisons fall back to records already saved in this cashbook. Sales invoice matching uses invoice number and customer GSTIN where available; B2CS is compared through GSTR-1 period totals. Quarterly returns are compared only against a full quarter.</p>
+        <div id="tallyGstKpis" class="sales-kpi-grid"></div>
+        <section class="gst-overview-section">
+          <h3>Sales and Purchase Totals</h3>
+          <div class="table-wrap"><table id="tallyGstCompareSummary"></table></div>
+        </section>
+        <section class="gst-overview-section">
+          <h3>Sales Totals: Books vs GSTR-1</h3>
+          <div class="table-wrap"><table id="tallyGstr1CompareTable"></table></div>
+        </section>
+        <section class="gst-overview-section">
+          <h3>Tax and ITC Comparison</h3>
+          <div class="table-wrap"><table id="tallyGstTaxCompare"></table></div>
+        </section>
+        <section class="gst-overview-section">
+          <div class="panel-head">
+            <h3>Sales Invoice Matching: Books vs GSTR-1</h3>
+            <label>Find invoice or customer<input id="tallyGstr1MatchSearch" type="search" placeholder="Invoice, customer, GSTIN, or result" autocomplete="off"></label>
+          </div>
+          <p id="tallyGstr1MatchCount" class="gst-overview-range" aria-live="polite"></p>
+          <div class="table-wrap tall"><table id="tallyGstr1MatchTable"></table></div>
+        </section>
+        <section class="gst-overview-section">
+          <div class="panel-head">
+            <h3>Purchase Invoice Matching: Tally vs GSTR-2B</h3>
+            <label>Find invoice or supplier<input id="tallyGstMatchSearch" type="search" placeholder="Invoice, supplier, GSTIN, or result" autocomplete="off"></label>
+          </div>
+          <p id="tallyGstMatchCount" class="gst-overview-range" aria-live="polite"></p>
+          <div class="table-wrap tall"><table id="tallyGstMatchTable"></table></div>
+        </section>
+      </section>
+    </section>
+
+    <section id="gstReturns" class="view">
+      <section class="panel gst-returns-panel">
+        <div class="panel-head">
+          <div><h2>GST Returns</h2><p class="panel-subtitle">GSTR-1, GSTR-3B, HSN summary, and eligible ITC working reports.</p></div>
+          <div class="panel-actions"><button id="gstUploadedPeriodsBtn" class="secondary" type="button">Uploaded periods</button><button id="exportGstReturnsBtn" class="secondary" type="button">Export CSV</button></div>
+        </div>
+        <div class="filters gst-returns-filters">
+          <label>Period<select id="gstReturnsPeriod"><option value="month">Month</option><option value="quarter">Quarter</option><option value="fy">Financial year</option><option value="calendar-year">Calendar year</option><option value="custom">Custom range</option></select></label>
+          <label>Month<input id="gstReturnsMonth" type="month"></label>
+          <label id="gstReturnsYearLabel">Financial year starts<input id="gstReturnsYear" type="number" min="2000" max="2100"></label>
+          <label>From<input id="gstReturnsFrom" type="date"></label>
+          <label>To<input id="gstReturnsTo" type="date"></label>
+          <p id="gstReturnsRangeLabel" class="gst-overview-range" aria-live="polite" hidden></p>
+          <button id="fetchGstReturnsBtn" type="button">Fetch report</button>
+        </div>
+        <div class="filters gst-returns-filters">
+          <label>Table date range<select id="gstReturnsTableRangeMode"><option value="all">All dates</option><option value="month">Month</option><option value="quarter">Quarter</option><option value="fy">Financial year</option><option value="calendar-year">Calendar year</option><option value="custom">Custom range</option></select></label>
+          <label id="gstReturnsTableMonthLabel" hidden>Month<input id="gstReturnsTableMonth" type="month"></label>
+          <label id="gstReturnsTableYearLabel" hidden>Financial year starts<input id="gstReturnsTableYear" type="number" min="2000" max="2100"></label>
+          <label id="gstReturnsTableFromLabel" hidden>From<input id="gstReturnsTableFrom" type="date"></label>
+          <label id="gstReturnsTableToLabel" hidden>To<input id="gstReturnsTableTo" type="date"></label>
+          <p id="gstReturnsTableRangeLabel" class="gst-overview-range" aria-live="polite" hidden></p>
+        </div>
+        <details class="gst-import-disclosure">
+          <summary><span>Import GSTR-2B statement</span><span class="gst-import-chevron" aria-hidden="true"></span></summary>
+          <div class="filters gst-returns-filters gst-import-fields">
+            <label>GSTR-2B statement<input id="gst2bFile" type="file" accept=".json,.xlsx,.xls,.csv,application/json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+            <button id="importGst2bBtn" type="button">Import statement</button>
+            <span id="gst2bImportStatus" class="panel-subtitle" role="status" aria-live="polite">Download GSTR-2B from the GST portal and upload it here. Records are stored in this cashbook database. Never enter your GST portal password in this app.</span>
+          </div>
+        </details>
+        <details class="gst-import-disclosure">
+          <summary><span>Import GSTR-1 return</span><span class="gst-import-chevron" aria-hidden="true"></span></summary>
+          <div class="filters gst-returns-filters gst-import-fields">
+            <label>GSTR-1 return JSON<input id="gstr1File" type="file" accept=".json,application/json"></label>
+            <button id="importGstr1Btn" type="button">Import GSTR-1</button>
+            <span id="gstr1ImportStatus" class="panel-subtitle" role="status" aria-live="polite">Upload a GST portal GSTR-1 JSON. Invoice sections and B2CS summaries are saved by GSTIN and return period for sales comparison.</span>
+          </div>
+        </details>
+        <details class="gst-import-disclosure">
+          <summary><span>Import filed GSTR-3B return</span><span class="gst-import-chevron" aria-hidden="true"></span></summary>
+          <div class="filters gst-returns-filters gst-import-fields">
+            <label>Filed GSTR-3B JSON<input id="gstr3bFile" type="file" accept=".json,application/json"></label>
+            <button id="importGstr3bBtn" type="button">Import filed return</button>
+            <span id="gstr3bImportStatus" class="panel-subtitle" role="status" aria-live="polite">Upload the GSTR-3B JSON downloaded from the GST portal. Imports are saved by GSTIN and return period.</span>
+          </div>
+        </details>
+        <div id="gstReturnsKpis" class="sales-kpi-grid"></div>
+        <p id="gstReturnsReportContext" class="gst-report-context" aria-live="polite"></p>
+        <div class="report-tabs gst-report-tabs"><button type="button" data-gst-report-tab="gstr1" class="active" aria-pressed="true">GSTR-1</button><button type="button" data-gst-report-tab="gstr1-imported" aria-pressed="false">GSTR-1 (IMPORTED)</button><button type="button" data-gst-report-tab="gstr3b" aria-pressed="false">GSTR-3B Working</button><button type="button" data-gst-report-tab="gstr3b-filed" aria-pressed="false">Filed GSTR-3B</button><button type="button" data-gst-report-tab="hsn" aria-pressed="false">HSN Summary</button><button type="button" data-gst-report-tab="itc" aria-pressed="false">Eligible ITC</button><button type="button" data-gst-report-tab="reconciliation" aria-pressed="false">GSTR-2B Match</button><button type="button" data-gst-report-tab="supplier-summary" aria-pressed="false">GSTR-2B Suppliers</button></div>
+        <div id="gst2bSupplierControls" class="gst2b-supplier-controls" hidden>
+          <label>Find supplier<input id="gst2bSupplierSearch" type="search" placeholder="Supplier name or GSTIN" autocomplete="off"></label>
+          <button id="gst2bExpandAllBtn" class="secondary" type="button">Expand all</button>
+          <button id="gst2bCollapseAllBtn" class="secondary" type="button">Collapse all</button>
+          <span id="gst2bSupplierCount" class="gst2b-supplier-count" aria-live="polite"></span>
+        </div>
+        <div id="gst2bMatchControls" class="gst2b-supplier-controls" hidden>
+          <label>Find invoice or supplier<input id="gst2bMatchSearch" type="search" placeholder="Invoice no., supplier, GSTIN, or status" autocomplete="off"></label>
+          <span id="gst2bMatchCount" class="gst2b-supplier-count" aria-live="polite"></span>
+        </div>
+        <div id="gstReturnsTableControls" class="gst2b-supplier-controls">
+          <label>Find in table<input id="gstReturnsTableSearch" type="search" placeholder="Search the current GST report table" autocomplete="off"></label>
+          <span id="gstReturnsTableCount" class="gst2b-supplier-count" aria-live="polite"></span>
+        </div>
+        <div id="gstr1ImportedControls" class="gst2b-supplier-controls" hidden>
+          <label>Find document or customer<input id="gstr1ImportedSearch" type="search" placeholder="Invoice, customer, GSTIN, or result" autocomplete="off"></label>
+          <span id="gstr1ImportedCount" class="gst2b-supplier-count" aria-live="polite"></span>
+        </div>
+        <div id="gstr1ImportedView" hidden>
+          <section class="gst-overview-section">
+            <h3>Cashbook Sales vs Imported GSTR-1</h3>
+            <div class="table-wrap"><table id="gstr1ImportedCompareTable"></table></div>
+          </section>
+          <section class="gst-overview-section">
+            <h3>Imported Invoices and Aggregates</h3>
+            <div class="gst-imported-view-tabs" role="tablist" aria-label="Imported GSTR-1 view">
+              <button type="button" class="active" data-gstr1-imported-view="all" role="tab" aria-selected="true">All rows</button>
+              <button type="button" data-gstr1-imported-view="groups" role="tab" aria-selected="false">Group-wise summary</button>
+            </div>
+            <div id="gstr1ImportedGroups" class="gst-imported-groups" hidden></div>
+            <div id="gstr1ImportedRowsWrap" class="table-wrap tall"><table id="gstr1ImportedRowsTable"></table></div>
+          </section>
+          <section id="gstr1ImportedHsnSection" class="gst-overview-section" hidden>
+            <h3>Imported HSN Summary</h3>
+            <div class="table-wrap tall"><table id="gstr1ImportedHsnTable"></table></div>
+          </section>
+          <section id="gstr1ImportedDocumentSection" class="gst-overview-section" hidden>
+            <h3>Document Issue Summary</h3>
+            <div class="table-wrap"><table id="gstr1ImportedDocumentTable"></table></div>
+          </section>
+        </div>
+        <div class="table-wrap tall"><table id="gstReturnsTable"></table></div>
+      </section>
+    </section>
+
+    <section id="sales" class="view">
+      <section class="panel sales-dashboard-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Sales Dashboard</h2>
+            <p class="panel-subtitle">Monthly and custom date range item sales, collections, dues, and customer sales.</p>
+          </div>
+          <button id="exportSalesDashboardBtn" class="secondary" type="button">Export CSV</button>
+        </div>
+        <div class="filters sales-dashboard-filters">
+          <label>Period
+            <select id="salesPeriod">
+              <option value="month">This month</option>
+              <option value="today">Today</option>
+              <option value="year">This year</option>
+              <option value="range">Custom range</option>
+              <option value="all">All sales</option>
+            </select>
+          </label>
+          <label>Month<input id="salesMonth" type="month"></label>
+          <label>From<input id="salesFrom" type="date"></label>
+          <label>To<input id="salesTo" type="date"></label>
+          <label>Item<input id="salesItemFilter" list="itemList" placeholder="All items"></label>
+          <label>Customer<input id="salesCustomerFilter" list="customerList" placeholder="All customers"></label>
+          <label>Payment
+            <select id="salesPaymentFilter">
+              <option value="">All payments</option>
+              <option value="cash">Cash</option>
+              <option value="bank">Bank</option>
+              <option value="bajaj">Bajaj Finance</option>
+              <option value="due">Due</option>
+            </select>
+          </label>
+          <button id="fetchSalesDashboardBtn" type="button">Fetch</button>
+        </div>
+        <div class="sales-kpi-grid" id="salesKpiGrid"></div>
+      </section>
+
+      <div class="sales-dashboard-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Items Sold</h2>
+          </div>
+          <div class="table-wrap tall">
+            <table id="salesItemTable"></table>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Daily Sales</h2>
+          </div>
+          <div class="table-wrap tall">
+            <table id="salesDateTable"></table>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Customer Sales</h2>
+          </div>
+          <div class="table-wrap tall">
+            <table id="salesCustomerTable"></table>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Sales Bills</h2>
+          </div>
+          <div class="table-wrap tall">
+            <table id="salesBillTable"></table>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="receipt" class="view">
+      <form autocomplete="off" id="receiptForm" class="entry-layout">
+        <section class="panel receipt-info-panel">
+          <div class="receipt-info-head">
+            <h2>Receipt Voucher</h2>
+            <div class="receipt-head-actions">
+              <button type="button" class="secondary add-head-action" id="addHeadBtn">Add New Head of Accounts</button> 
+              <button type="button" class="secondary add-customer-action" id="addCustomerBtn">Add New Customer</button>
+            </div>
+          </div>
+          <div class="receipt-info-grid">
+            <label>Memo No.<input name="memo" required></label>
+            <label>Date<input name="date" type="date" required></label>
+            <label>Head of Account
+              <select name="head">
+                <option>CASH SELLING</option>
+                <option>DUE</option>
+                <option>DUE PAID</option>
+                <option>BAJAJ FINANCE</option>
+                <option>Opening Balance</option>
+              </select>
+            </label>
+            <label>Customer<input name="customer" list="customerList" required></label>
+            <label>Mobile No.<input name="mobile"></label>
+            <label>GSTIN<input name="gstin"></label>
+            <label>State Code<input name="stateCode" placeholder="19" inputmode="numeric" pattern="\d{2}" maxlength="2"></label>
+            <label class="receipt-address">Address<input name="address"></label>
+            <label>Sales Manager<input name="salesManager"></label>
+            <label>Vehicle No.<input name="vehicleNo"></label>
+            <label>Transportation<input name="transportMode"></label>
+          </div>
+          <div class="receipt-alert" id="receiptCustomerAlert" hidden>Customer not matched. Select a customer from the dropdown or add a new customer.</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Goods</h2>
+            <button type="button" class="secondary add-item-action" id="addItemBtn">Add item</button>
+          </div>
+          <div class="table-wrap">
+            <table id="itemTable" class="editable-table"></table>
+          </div>
+        </section>
+
+        <section class="panel totals-panel payment-panel">
+          <div class="payment-head">
+            <h2>Payment</h2>
+          </div>
+          <div class="payment-grid">
+            <label>Discount<input name="discount" type="number" min="0" step="0.01" value="0"></label>
+            <label>Received by Cash<input name="cash" type="number" min="0" step="0.01" value="0"></label>
+            <label>Received by Bank<input name="bank" type="number" min="0" step="0.01" value="0"></label>
+            <label>Bajaj Finance<input name="bajaj" type="number" min="0" step="0.01" value="0"></label>
+            <label>Payment Mode
+              <select name="mode">
+                <option>PhonePe</option>
+                <option>POS</option>
+                <option>Direct Account</option>
+                <option>Cheque</option>
+                <option>Bajaj Pay</option>
+              </select>
+            </label>
+            <label class="payment-remark">Remark<input name="remark"></label>
+            <label>Profit<input name="profit" type="number" step="0.01" required></label>
+          </div>
+          <div id="receiptTotals" class="totals payment-totals"></div>
+          <div class="actions payment-actions">
+            <button type="submit">Save receipt</button>
+            <button type="button" class="secondary" id="printReceiptBtn">Print voucher</button>
+          </div>
+        </section>
+      </form>
+      <section id="printArea" class="print-area"></section>
+    </section>
+
+    <section id="payment" class="view">
+      <form autocomplete="off" id="paymentForm" class="panel form-panel payment-voucher-panel">
+        <div class="payment-voucher-head">
+          <div>
+            <h2 id="paymentVoucherTitle">Payment Voucher</h2>
+            <p>Record cash or bank expenses into the transaction ledger.</p>
+          </div>
+          <div class="payment-head-actions">
+            <label class="staff-due-toggle">
+              <input name="staffDue" type="checkbox">
+              <span>Staff due</span>
+            </label>
+            <label class="staff-due-toggle due-paid-toggle">
+              <input name="duePaid" type="checkbox">
+              <span>Due paid</span>
+            </label>
+            <label class="staff-due-toggle fund-received-toggle">
+              <input name="fundReceived" type="checkbox">
+              <span>Fund Received</span>
+            </label>
+            <button type="button" class="secondary add-head-action" id="addPaymentHeadBtn">Add New Head of Accounts</button>
+          </div>
+        </div>
+        <div class="payment-balance-row" id="paymentBalanceRow" aria-label="Current balances"></div>
+        <div class="payment-voucher-grid">
+          <label>Memo No.<input name="memo" required></label>
+          <label>Date<input name="date" type="date" required></label>
+          <label>Head of Account<select name="head"></select></label>
+          <label><span id="paymentPartyLabel">Paid To</span><input name="party" list="paymentPartyList" required></label>
+          <label><span id="paymentAmountLabel">Expense Amount</span><input name="amount" type="number" min="0" step="0.01" required></label>
+          <label><span id="paymentBankLabel">Bank Amount</span><input name="bank" type="number" min="0" step="0.01" value="0"></label>
+          <label id="paymentFinanceField" hidden><span id="paymentFinanceLabel">Finance Amount</span><input name="bajaj" type="number" min="0" step="0.01" value="0"></label>
+          <label id="paymentMethodLabel">Payment By
+            <select name="paymentMethod">
+              <option>Cash</option>
+              <option>Bank</option>
+              <option>Cheque</option>
+            </select>
+          </label>
+          <label class="payment-voucher-remark">Remarks<input name="remark"></label>
+        </div>
+        <div id="paymentDueAmount" class="payment-due-card" hidden></div>
+        <div class="actions payment-voucher-actions">
+          <button type="submit">Save payment</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="transfers" class="view">
+      <section class="panel form-panel payment-voucher-panel">
+        <div class="payment-voucher-head">
+          <div>
+            <h2>Balance Transfer</h2>
+            <p>Move money between cash, bank, and finance balances.</p>
+          </div>
+        </div>
+        <div class="payment-balance-row" id="transferBalanceRow" aria-label="Current balances"></div>
+        <form autocomplete="off" id="transferForm" class="payment-voucher-grid">
+          <label>Date<input name="date" type="date" required></label>
+          <label>Transfer Type
+            <select name="type">
+              <option value="cashToBank">Cash to Bank</option>
+              <option value="bankToCash">Bank to Cash</option>
+              <option value="financeToBank">Finance to Bank</option>
+            </select>
+          </label>
+          <label>Amount<input name="amount" type="number" min="0" step="0.01" required></label>
+          <label class="payment-voucher-remark">Remark<input name="remark" placeholder="Optional note"></label>
+          <div class="actions payment-voucher-actions">
+            <button type="submit">Save transfer</button>
+          </div>
+        </form>
+      </section>
+    </section>
+
+    <section id="settings" class="view">
+      <form autocomplete="off" id="settingsForm" class="settings-form">
+        <div class="settings-hero">
+          <div>
+            <h2>Settings</h2>
+            <p>Business profile, payment details, memo numbers, and voucher heads.</p>
+          </div>
+          <button type="submit">Save settings</button>
+        </div>
+
+        <div class="settings-layout">
+          <section class="settings-card settings-card-wide">
+            <div class="settings-card-head">
+              <span>01</span>
+              <div>
+                <h3>Business Profile</h3>
+                <p>Shown on invoices and vouchers</p>
+              </div>
+            </div>
+            <div class="settings-grid">
+              <label class="span-2">Business Name<input name="businessName" placeholder="Business name"></label>
+              <label class="span-2">Address<input name="businessAddress" placeholder="Business address"></label>
+              <label>State Code<input name="businessStateCode" placeholder="19" inputmode="numeric" pattern="\d{2}" maxlength="2"></label>
+              <label>GSTIN<input name="businessGstin" placeholder="GSTIN"></label>
+              <label>GST bill format<select name="billTemplate"><option value="classic">Classic bill</option><option value="modern">Modern tax invoice</option></select></label>
+            </div>
+          </section>
+
+          <section class="settings-card">
+            <div class="settings-card-head">
+              <span>02</span>
+              <div>
+                <h3>Account Details</h3>
+                <p>Bank and payment information</p>
+              </div>
+            </div>
+            <div class="settings-grid settings-grid-compact">
+              <label>Bank Name<input name="accountBankName" placeholder="Bank name"></label>
+              <label>Account No.<input name="accountNumber" placeholder="Account number"></label>
+              <label>IFSC<input name="accountIfsc" placeholder="IFSC"></label>
+              <label>Branch<input name="accountBranch" placeholder="Branch"></label>
+              <label class="span-2">UPI / Payment Note<input name="accountUpi" placeholder="UPI ID or payment note" readonly></label>
+            </div>
+          </section>
+
+          <section class="settings-card">
+            <div class="settings-card-head">
+              <span>03</span>
+              <div>
+                <h3>Memo Numbers</h3>
+                <p>Receipt and payment voucher series</p>
+              </div>
+            </div>
+            <div class="memo-settings-grid">
+              <div class="memo-settings-card">
+                <div class="memo-settings-title">
+                  <strong>Receipt Voucher</strong>
+                  <label class="toggle-row">
+                    <input name="receiptMemoAuto" type="checkbox">
+                    <span>Auto</span>
+                  </label>
+                </div>
+                <div class="memo-field-grid">
+                  <label>Prefix<input name="receiptMemoPrefix" value="RV-"></label>
+                  <label>Next No.<input name="receiptMemoNext" type="number" min="1" step="1" value="1"></label>
+                </div>
+                <div class="setting-preview">
+                  <span>Preview</span>
+                  <strong id="receiptMemoPreview">RV-1</strong>
+                </div>
+              </div>
+
+              <div class="memo-settings-card">
+                <div class="memo-settings-title">
+                  <strong>Payment Voucher</strong>
+                  <label class="toggle-row">
+                    <input name="paymentMemoAuto" type="checkbox">
+                    <span>Auto</span>
+                  </label>
+                </div>
+                <div class="memo-field-grid">
+                  <label>Prefix<input name="paymentMemoPrefix" value="PV-"></label>
+                  <label>Next No.<input name="paymentMemoNext" type="number" min="1" step="1" value="1"></label>
+                </div>
+                <div class="setting-preview">
+                  <span>Preview</span>
+                  <strong id="paymentMemoPreview">PV-1</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="settings-card settings-card-wide">
+            <div class="settings-card-head">
+              <span>04</span>
+              <div>
+                <h3>Voucher Heads</h3>
+                <p>Account heads used in receipt and payment forms</p>
+              </div>
+            </div>
+            <div class="head-manager-grid">
+              <section class="head-manager-card">
+                <div class="head-manager-title">
+                  <strong>Receipt Heads</strong>
+                  <span>Receipt Voucher</span>
+                </div>
+                <div class="head-add-row">
+                  <input id="settingsReceiptHeadInput" placeholder="New receipt head">
+                  <button type="button" class="secondary" id="settingsAddReceiptHeadBtn">Add</button>
+                </div>
+                <div class="head-chip-list" id="settingsReceiptHeads"></div>
+              </section>
+              <section class="head-manager-card">
+                <div class="head-manager-title">
+                  <strong>Payment Heads</strong>
+                  <span>Payment Voucher</span>
+                </div>
+                <div class="head-add-row">
+                  <input id="settingsPaymentHeadInput" placeholder="New payment head">
+                  <button type="button" class="secondary" id="settingsAddPaymentHeadBtn">Add</button>
+                </div>
+                <div class="head-chip-list" id="settingsPaymentHeads"></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="settings-card settings-card-wide">
+            <div class="settings-card-head">
+              <span>05</span>
+              <div>
+                <h3>Edit & Delete Controls</h3>
+                <p>Rows stay locked until the edit/delete password is entered.</p>
+              </div>
+            </div>
+            <div class="settings-grid settings-grid-compact">
+              <label>Edit/Delete Password<input name="actionLockPassword" type="password" placeholder="Set password"></label>
+            </div>
+            <div class="settings-card-actions">
+              <button id="saveActionLockBtn" type="button">Save password</button>
+              <span id="actionLockStatus">Rows must be unlocked before edit/delete.</span>
+            </div>
+          </section>
+
+          <section class="settings-card settings-card-wide">
+            <div class="settings-card-head">
+              <span>06</span>
+              <div>
+                <h3>Admin Users</h3>
+                <p>Change your password and manage user access.</p>
+              </div>
+            </div>
+            <div class="user-management-grid">
+              <section class="user-password-card">
+                <h4>My Password</h4>
+                <div class="settings-grid settings-grid-compact">
+                  <label>Current Password<input id="ownCurrentPassword" type="password" autocomplete="current-password" placeholder="Current password"></label>
+                  <label>New Password<input id="ownNewPassword" type="password" autocomplete="new-password" minlength="6" placeholder="Minimum 6 characters"></label>
+                </div>
+                <div class="settings-card-actions">
+                  <button id="changeOwnPasswordBtn" type="button">Change my password</button>
+                  <span id="ownPasswordStatus">Signed in as admin.</span>
+                </div>
+              </section>
+              <section class="user-list-card">
+                <div class="user-list-head">
+                  <h4>User List</h4>
+                  <button id="refreshUsersBtn" type="button" class="secondary">Refresh users</button>
+                </div>
+                <div class="table-wrap">
+                  <table id="settingsUsersTable"></table>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section class="settings-card settings-card-wide">
+            <div class="settings-card-head">
+              <span>07</span>
+              <div>
+                <h3>Storage & Sync</h3>
+                <p>Use browser storage when network is unavailable, then sync local records to MongoDB.</p>
+              </div>
+            </div>
+            <div class="storage-sync-grid">
+              <label class="storage-switch">
+                <input name="localStorageMode" type="checkbox">
+                <span>
+                  <strong>Offline local storage mode</strong>
+                  <small>Save new entries in this browser instead of MongoDB.</small>
+                </span>
+              </label>
+              <div class="storage-status" id="storageModeStatus"></div>
+              <button id="syncStorageBtn" type="button">Sync now</button>
+            </div>
+          </section>
+
+          <section class="settings-card settings-card-wide">
+            <div class="settings-card-head">
+              <span>08</span>
+              <div>
+                <h3>GST Data Management</h3>
+                <p>Remove imported GSTR-2B invoices from this cashbook database.</p>
+              </div>
+            </div>
+            <div class="settings-card-actions">
+              <label class="toggle-row">
+                <input id="gst2bRowDeleteEnabled" type="checkbox">
+                <span>Show per-invoice delete buttons in GSTR-2B supplier lists</span>
+              </label>
+            </div>
+            <div class="settings-card-actions">
+              <button id="deleteGst2bDataBtn" class="danger-btn" type="button">Delete imported GSTR-2B data</button>
+              <span id="deleteGst2bDataStatus" role="status" aria-live="polite">This does not delete purchase entries, invoices, or other accounting records.</span>
+            </div>
+          </section>
+        </div>
+      </form>
+    </section>
+
+    <section id="audit" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Edit / Delete History</h2>
+            <p class="panel-subtitle">Audit trail for every edit and delete made in the app.</p>
+          </div>
+          <button id="exportAuditBtn" class="secondary" type="button">Export CSV</button>
+        </div>
+        <div class="filters audit-filters date-range-filters">
+          <input id="auditSearch" placeholder="Search user, page, memo, customer">
+          <select id="auditAction">
+            <option value="">All actions</option>
+            <option value="edit">Edit</option>
+            <option value="delete">Delete</option>
+          </select>
+          <select id="auditCollection">
+            <option value="">All pages</option>
+          </select>
+          <label>Date range<select id="auditDateRangeMode"><option value="all">All dates</option><option value="month">Month</option><option value="quarter">Quarter</option><option value="year">Year</option><option value="custom">Custom range</option></select></label>
+          <input id="auditRangeMonth" type="month">
+          <input id="auditFrom" type="date" hidden>
+          <input id="auditTo" type="date" hidden>
+        </div>
+        <div class="table-wrap tall audit-table-wrap">
+          <table id="auditTable"></table>
+        </div>
+      </section>
+    </section>
+
+    <section id="ledger" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Transaction Ledger</h2>
+          <button id="exportLedgerBtn" class="secondary">Export CSV</button>
+        </div>
+        <div class="filters date-range-filters">
+          <input id="ledgerSearch" placeholder="Search memo, customer, mobile, remark">
+          <label>Date range<select id="ledgerDateRangeMode"><option value="all">All dates</option><option value="month">Month</option><option value="quarter">Quarter</option><option value="year">Year</option><option value="custom">Custom range</option></select></label>
+          <input id="ledgerRangeMonth" type="month">
+          <input id="ledgerFrom" type="date" hidden>
+          <input id="ledgerTo" type="date" hidden>
+          <select id="ledgerType"><option value="">All heads</option></select>
+        </div>
+        <div class="table-wrap tall">
+          <table id="ledgerTable"></table>
+        </div>
+        <div id="ledgerPagination" class="pagination"></div>
+      </section>
+    </section>
+
+    <section id="quotations" class="view">
+      <div class="entry-layout">
+        <section class="panel">
+          <div class="panel-head"><h2>Business Profiles</h2></div>
+          <form id="businessForm" class="receipt-info-grid" autocomplete="off">
+            <label>Business name<input name="name" required placeholder="Business name"></label>
+            <label>GSTIN<input name="gstin" maxlength="15"></label>
+            <label>Mobile<input name="mobile"></label>
+            <label>Email<input name="email" type="email"></label>
+            <label>Bank name<input name="bankName" placeholder="Bank name"></label>
+            <label>Account name<input name="accountName" placeholder="Account holder name"></label>
+            <label>Account no.<input name="accountNumber" inputmode="numeric"></label>
+            <label>IFSC<input name="ifsc" maxlength="11" style="text-transform:uppercase"></label>
+            <label>State<input name="state"></label>
+            <label>State code<input name="stateCode" maxlength="2" inputmode="numeric"></label>
+            <label class="receipt-address">Address<input name="address"></label>
+            <label class="receipt-address">Default notes<textarea name="notes" rows="2" placeholder="Default note for every quotation"></textarea></label>
+            <label class="receipt-address">Default terms<textarea name="terms" rows="2" placeholder="Validity, delivery, payment terms..."></textarea></label>
+            <label>Quotation template<select name="quotationTemplate"><option value="classic">Classic</option><option value="modern">Modern</option><option value="compact">Compact</option></select></label>
+            <div class="actions"><button type="submit">Save business</button><button type="button" class="secondary" id="businessFormResetBtn">Clear</button></div>
+          </form>
+          <div class="table-wrap"><table id="businessTable"></table></div>
+        </section>
+
+        <form id="quotationForm" class="panel" autocomplete="off">
+          <div class="panel-head"><h2>Create Quotation</h2><button type="button" class="secondary" id="quotationAddItemBtn">Add item</button></div>
+          <div class="receipt-info-grid">
+            <label>Business<select name="businessId" required id="quotationBusiness"><option value="">Select business</option></select></label>
+            <label>Quotation no.<input name="quotationNo" required placeholder="QT-1"></label>
+            <label>Date<input name="date" type="date" required></label>
+            <label>Valid until<input name="validUntil" type="date"></label>
+            <label>Customer name<input name="customerName" required></label>
+            <label>Mobile<input name="customerMobile"></label>
+            <label>GSTIN<input name="customerGstin"></label>
+            <label>State code<input name="customerStateCode" maxlength="2" inputmode="numeric"></label>
+            <label class="receipt-address">Customer address<input name="customerAddress"></label>
+          </div>
+          <div class="table-wrap"><table id="quotationItemTable" class="editable-table"></table></div>
+          <div class="payment-grid">
+            <label>Discount<input name="discount" type="number" min="0" step="0.01" value="0"></label>
+            <label class="payment-remark">Notes<input name="notes" placeholder="Optional note"></label>
+            <label class="payment-remark">Terms<textarea name="terms" rows="2" placeholder="Quotation terms"></textarea></label>
+          </div>
+          <div id="quotationTotals" class="totals payment-totals"></div>
+          <div class="actions payment-actions"><button type="submit">Save quotation</button><button type="button" class="secondary" id="quotationPrintBtn">Print quotation</button></div>
+        </form>
+
+        <section class="panel"><div class="panel-head"><h2>Quotation Register</h2></div><div class="table-wrap"><table id="quotationTable"></table></div></section>
+      </div>
+    </section>
+
+    <section id="accountsManager" class="view">
+      <div class="accounts-manager-grid">
+        <section class="panel accounts-card accounts-card-wide">
+          <div class="panel-head"><div><h2>Creditor List</h2><p class="panel-subtitle">Outstanding supplier balances as at the selected financial year's 31st March.</p></div><div class="panel-actions"><label class="fy-select">Financial Year<select id="accountsFy"></select></label><button type="button" class="secondary" data-accounts-print="creditors">Print</button></div></div>
+          <div class="table-wrap tall"><table id="creditorTable"></table></div>
+        </section>
+        <section class="panel accounts-card"><div class="panel-head"><div><h2>Debtor List</h2><p class="panel-subtitle">Customer dues pending at the FY closing date.</p></div><button type="button" class="secondary" data-accounts-print="debtors">Print</button></div><div class="table-wrap"><table id="debtorTable"></table></div></section>
+        <section class="panel accounts-card balance-sheet-card"><div class="panel-head"><div><h2>Balance Sheet</h2><p class="panel-subtitle">FY closing snapshot.</p></div><div class="panel-actions"><button type="button" class="secondary" data-accounts-print="balanceSheet">Print</button><button type="button" class="secondary" data-view-jump="chartAccounts">Chart of Accounts</button></div></div><div id="balanceSheetSummary" class="accounts-summary"></div></section>
+        <section class="panel accounts-card"><div class="panel-head"><div><h2>Manual Creditor List</h2><p class="panel-subtitle">Add an opening creditor balance as at 31st March.</p></div><button type="button" class="secondary" data-accounts-print="manualCreditors">Print</button></div><form id="manualCreditorForm" class="inline-form accounts-manual-form" autocomplete="off"><input name="party" placeholder="Creditor / party name" required><input name="balance" type="number" min="0" step="0.01" placeholder="Balance as on 31st March" required><button type="submit">Add balance</button></form><div class="table-wrap"><table id="manualCreditorTable"></table></div></section>
+      </div>
+    </section>
+
+    <section id="chartAccounts" class="view">
+      <section class="panel">
+        <div class="panel-head"><div><h2>Chart of Accounts</h2><p class="panel-subtitle">Income / credits and expenses / debits for the selected financial year.</p></div><div class="panel-actions"><label class="fy-select">Financial Year<select id="chartAccountsFy"></select></label><button id="printChartAccountsBtn" type="button" class="secondary">Print</button><button type="button" class="secondary" data-view-jump="accountsManager">Back to Accounts Manager</button></div></div>
+        <div class="chart-accounts-grid">
+          <section class="chart-account-side credit-side"><div class="chart-account-head"><h3>Income (Credits)</h3><strong id="chartCreditTotal"></strong></div><form id="manualCreditForm" class="inline-form chart-manual-form"><input name="particular" placeholder="Manual credit particular" required><input name="amount" type="number" min="0" step="0.01" placeholder="Amount" required><button type="submit">Add credit</button></form><div class="table-wrap"><table id="chartCreditTable"></table></div></section>
+          <section class="chart-account-side debit-side"><div class="chart-account-head"><h3>Expense (Debits)</h3><strong id="chartDebitTotal"></strong></div><form id="manualDebitForm" class="inline-form chart-manual-form"><input name="particular" placeholder="Manual debit particular" required><input name="amount" type="number" min="0" step="0.01" placeholder="Amount" required><button type="submit">Add debit</button></form><div class="table-wrap"><table id="chartDebitTable"></table></div></section>
+        </div>
+      </section>
+    </section>
+
+    <section id="chartAccountDetails" class="view">
+      <section class="panel">
+        <div class="panel-head"><div><h2 id="chartAccountDetailTitle">Account Details</h2><p id="chartAccountDetailSubtitle" class="panel-subtitle"></p></div><div class="panel-actions"><button type="button" class="secondary" data-view-jump="chartAccounts">Back to Chart of Accounts</button></div></div>
+        <div class="table-wrap tall"><table id="chartAccountDetailTable"></table></div>
+      </section>
+    </section>
+
+    <section id="dues" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Due Register</h2>
+          <div class="panel-actions">
+            <button id="printDuesBtn" class="secondary" type="button">Print</button>
+            <button id="exportDuesBtn" class="secondary" type="button">Export CSV</button>
+          </div>
+        </div>
+        <div class="filters">
+          <input id="dueSearch" placeholder="Search due customer">
+          <select id="dueStatus">
+            <option value="open">Open dues</option>
+            <option value="all">All customers</option>
+            <option value="paid">Paid / advance</option>
+          </select>
+        </div>
+        <div class="data-tabs" role="tablist" aria-label="Due register views">
+          <button type="button" class="active" data-due-tab="register">Register</button>
+          <button type="button" data-due-tab="summary">Summary</button>
+        </div>
+        <div data-due-panel="register">
+          <div class="table-wrap tall">
+            <table id="dueTable"></table>
+          </div>
+          <div id="duePagination" class="pagination"></div>
+        </div>
+        <div data-due-panel="summary" hidden>
+          <div class="table-wrap tall">
+            <table id="dueSummaryTable"></table>
+          </div>
+          <div id="dueSummaryPagination" class="pagination"></div>
+        </div>
+      </section>
+    </section>
+
+    <section id="customers" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Address Book</h2>
+          <div class="panel-actions">
+            <input id="importCustomersExcel" type="file" accept=".xlsx,.xls,.csv" hidden>
+            <button id="importCustomersBtn" type="button" class="secondary import-excel-action">Import Excel</button>
+            <button id="exportCustomersBtn" class="secondary" type="button">Export CSV</button>
+          </div>
+        </div>
+        <form autocomplete="off" id="customerForm" class="inline-form customer-form">
+          <input name="name" placeholder="Customer name" required>
+          <input name="mobile" placeholder="Mobile no.">
+          <input name="address" placeholder="Address">
+          <input name="city" placeholder="City">
+          <input name="stateCode" placeholder="State code" inputmode="numeric" pattern="\d{2}" maxlength="2">
+          <input name="gstin" placeholder="GSTIN">
+          <button type="submit">Add customer</button>
+        </form>
+        <div class="filters">
+          <input id="customerSearch" placeholder="Search customer, mobile, address">
+        </div>
+        <div class="table-wrap tall">
+          <table id="customerTable"></table>
+        </div>
+        <div id="customerPagination" class="pagination"></div>
+      </section>
+    </section>
+
+    <section id="cheques" class="view">
+      <section class="panel">
+        <h2>Cheque DropBox</h2>
+        <form autocomplete="off" id="chequeForm" class="inline-form cheque-form">
+          <input name="customer" list="customerList" placeholder="Customer" required>
+          <input name="mobile" placeholder="Mobile">
+          <input name="chequeNo" placeholder="Cheque no." required>
+          <input name="chequeDate" type="date" required>
+          <input name="amount" type="number" min="0" step="0.01" placeholder="Amount" required>
+          <select name="bank"><option>Axis Bank</option><option>CASH</option><option>BAJAJ FINSRV</option></select>
+          <select name="response"><option>Pending</option><option>Clear</option><option>Return</option></select>
+          <button type="submit">Add cheque</button>
+        </form>
+        <div class="filters">
+          <input id="chequeSearch" placeholder="Search cheque, customer, mobile, bank">
+        </div>
+        <div class="table-wrap tall">
+          <table id="chequeTable"></table>
+        </div>
+        <div id="chequePagination" class="pagination"></div>
+      </section>
+    </section>
+
+    <section id="chequeManagement" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Cheque Management</h2>
+            <p class="panel-subtitle">Track cheques issued by our business to suppliers and mahajans.</p>
+          </div>
+          <button id="exportChequeManagementBtn" class="secondary" type="button">Export CSV</button>
+        </div>
+        <form autocomplete="off" id="outgoingChequeForm" class="inline-form cheque-management-form">
+          <input name="supplier" list="supplierList" placeholder="Supplier / Mahajan" required>
+          <input name="chequeNo" placeholder="Cheque no." required>
+          <input name="chequeDate" type="date" required>
+          <input name="amount" type="number" min="0" step="0.01" placeholder="Amount" required>
+          <select name="bank"><option>Axis Bank</option><option>CASH</option><option>BAJAJ FINSRV</option></select>
+          <input name="purpose" placeholder="Purpose / bill no.">
+          <select name="status"><option>Issued</option><option>Presented</option><option>Cleared</option><option>Cancelled</option></select>
+          <button type="submit">Add issued cheque</button>
+        </form>
+        <div class="cheque-management-summary" id="chequeManagementSummary"></div>
+        <div class="data-tabs" role="tablist" aria-label="Cheque management views">
+          <button type="button" class="active" data-cheque-management-tab="issued">Issued Cheque</button>
+          <button type="button" data-cheque-management-tab="others">All Others</button>
+        </div>
+        <div class="filters cheque-management-filters date-range-filters">
+          <input id="chequeManagementSearch" placeholder="Search supplier, cheque no., purpose">
+          <select id="chequeManagementStatus">
+            <option value="">All status</option>
+            <option>Issued</option>
+            <option>Presented</option>
+            <option>Cleared</option>
+            <option>Cancelled</option>
+          </select>
+          <select id="chequeManagementBank"><option value="">All banks</option></select>
+          <label>Date range<select id="chequeManagementDateRangeMode"><option value="all">All dates</option><option value="month">Month</option><option value="quarter">Quarter</option><option value="year">Year</option><option value="custom">Custom range</option></select></label>
+          <input id="chequeManagementRangeMonth" type="month">
+          <input id="chequeManagementFrom" type="date" hidden>
+          <input id="chequeManagementTo" type="date" hidden>
+        </div>
+        <div class="table-wrap tall">
+          <table id="chequeManagementTable"></table>
+        </div>
+        <div id="chequeManagementPagination" class="pagination"></div>
+      </section>
+    </section>
+
+    <section id="suppliers" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Supplier Management</h2>
+            <p class="panel-subtitle">Supplier-wise purchases, payments, and outstanding balance.</p>
+          </div>
+          <div class="panel-actions">
+            <button id="addSupplierBtn" type="button">Add Supplier</button>
+            <button id="addSupplierOpeningBalanceBtn" type="button" class="secondary">Add Opening Balance</button>
+            <button id="printSuppliersBtn" class="secondary" type="button">Print</button>
+            <button id="exportSuppliersBtn" class="secondary" type="button">Export CSV</button>
+          </div>
+        </div>
+        <div class="cheque-management-summary" id="supplierSummaryCards"></div>
+        <div class="filters">
+          <input id="supplierSearch" placeholder="Search supplier or bill no.">
+          <select id="supplierBalanceStatus">
+            <option value="">All suppliers</option>
+            <option value="outstanding">Outstanding only</option>
+            <option value="paid">Paid / advance</option>
+          </select>
+        </div>
+        <div class="table-wrap tall">
+          <table id="supplierTable"></table>
+        </div>
+      </section>
+    </section>
+
+    <section id="purchases" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Purchase Register</h2>
+          <button id="exportPurchasesBtn" class="secondary">Export CSV</button>
+        </div>
+        <form autocomplete="off" id="purchaseForm" class="inline-form purchase-form">
+          <input name="date" type="date" required>
+          <input name="supplier" list="supplierList" placeholder="Mahajan / supplier" required>
+          <input name="item" list="itemList" placeholder="Item name" required>
+          <input name="qty" type="number" min="0" step="0.01" placeholder="Qty purchased" required>
+          <input name="billNo" placeholder="Bill no.">
+          <input name="amount" type="number" min="0" step="0.01" placeholder="Bill amount" required>
+          <input name="paid" type="number" min="0" step="0.01" placeholder="Paid amount">
+          <button type="submit">Add purchase</button>
+        </form>
+        <div class="filters">
+          <input id="purchaseSearch" placeholder="Search purchase register">
+        </div>
+        <div class="table-wrap tall">
+          <table id="purchaseTable"></table>
+        </div>
+      </section>
+    </section>
+
+    <section id="items" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Items</h2>
+            <p class="panel-subtitle">Item-wise purchase quantity, sold quantity, and stock balance.</p>
+          </div>
+          <button id="exportItemsBtn" class="secondary" type="button">Export CSV</button>
+        </div>
+        <form autocomplete="off" id="itemForm" class="inline-form">
+          <input name="name" placeholder="Item name" required>
+          <input name="group" placeholder="Group (e.g. Steel)" required>
+          <input name="hsn" placeholder="HSN">
+          <select name="unit" required>
+            <option value="Pcs">Pcs</option>
+            <option value="Cft">Cft</option>
+            <option value="Ton">Ton</option>
+            <option value="Kg">Kg</option>
+            <option value="Dozen">Dozen</option>
+          </select>
+          <input name="rate" type="number" min="0" step="0.01" placeholder="Rate">
+          <button type="submit">Add item</button>
+        </form>
+        <div class="filters">
+          <input id="itemSearch" placeholder="Search items">
+          <select id="itemStockStatus">
+            <option value="">All stock</option>
+            <option value="available">Available stock</option>
+            <option value="out">Out of stock / negative</option>
+          </select>
+        </div>
+        <div class="table-wrap tall">
+          <table id="itemMasterTable"></table>
+        </div>
+        <div id="itemPagination" class="pagination"></div>
+      </section>
+    </section>
+  </main>
+
+  <datalist id="customerList"></datalist>
+  <datalist id="paymentPartyList"></datalist>
+  <datalist id="supplierList"></datalist>
+  <datalist id="itemList"></datalist>
+  <div class="modal-backdrop" id="supplierModal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="supplierModalTitle">
+      <div class="modal-head">
+        <h2 id="supplierModalTitle">Add Supplier / Mahajan</h2>
+        <button type="button" class="modal-close" data-close-modal="supplierModal" aria-label="Close">x</button>
+      </div>
+      <form autocomplete="off" id="supplierModalForm" class="modal-body">
+        <div class="form-grid">
+          <label>Supplier Name<input name="name" required placeholder="Mahajan / supplier name"></label>
+          <label>Opening Balance<input name="openingBalance" type="number" min="0" step="0.01" value="0" placeholder="Opening balance"></label>
+          <label>Mobile<input name="mobile" placeholder="Mobile no."></label>
+          <label>GSTIN<input name="gstin" placeholder="GSTIN"></label>
+          <label>Bank Name<input name="bankName" placeholder="Bank name"></label>
+          <label>Account No.<input name="accountNumber" placeholder="Account no."></label>
+          <label>IFSC<input name="ifsc" placeholder="IFSC"></label>
+          <label class="wide-field">Address<input name="address" placeholder="Supplier address"></label>
+          <label class="wide-field">Remark<input name="remark" placeholder="Notes"></label>
+        </div>
+        <div class="modal-actions">
+          <button type="submit">Save Supplier</button>
+          <button type="button" class="secondary" data-close-modal="supplierModal">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="supplierOpeningBalanceModal" hidden>
+    <section class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="supplierOpeningBalanceTitle">
+      <div class="modal-head">
+        <h2 id="supplierOpeningBalanceTitle">Supplier Opening Balance</h2>
+        <button type="button" class="modal-close" data-close-modal="supplierOpeningBalanceModal" aria-label="Close">x</button>
+      </div>
+      <form autocomplete="off" id="supplierOpeningBalanceForm" class="modal-body">
+        <label>Supplier<select name="supplier" id="supplierOpeningBalanceSupplier" required></select></label>
+        <label>Opening date<input name="openingDate" type="date" required></label>
+        <label>Opening balance as on 1 April<input name="amount" type="number" min="0" step="0.01" required placeholder="Amount"></label>
+        <label>Remark<input name="remark" placeholder="Optional note"></label>
+        <div class="modal-actions"><button type="submit">Save Opening Balance</button><button type="button" class="secondary" data-close-modal="supplierOpeningBalanceModal">Cancel</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="headModal" hidden>
+    <section class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="headModalTitle">
+      <div class="modal-head">
+        <h2 id="headModalTitle">Add Head of Account</h2>
+        <button type="button" class="modal-close" data-close-modal="headModal" aria-label="Close">x</button>
+      </div>
+      <form autocomplete="off" id="headModalForm" class="modal-body">
+        <label>Head Name<input name="head" required placeholder="Example: CASH SELLING"></label>
+        <div class="modal-actions">
+          <button type="submit">Save Head</button>
+          <button type="button" class="secondary" data-close-modal="headModal">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="paymentHeadModal" hidden>
+    <section class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="paymentHeadModalTitle">
+      <div class="modal-head">
+        <h2 id="paymentHeadModalTitle">Add Payment Head</h2>
+        <button type="button" class="modal-close" data-close-modal="paymentHeadModal" aria-label="Close">x</button>
+      </div>
+      <form autocomplete="off" id="paymentHeadModalForm" class="modal-body">
+        <label>Head Name<input name="head" required placeholder="Example: SHOP RENT"></label>
+        <div class="modal-actions">
+          <button type="submit">Save Head</button>
+          <button type="button" class="secondary" data-close-modal="paymentHeadModal">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="customerModal" hidden>
+    <section class="modal customer-modal" role="dialog" aria-modal="true" aria-labelledby="customerModalTitle">
+      <div class="modal-head">
+        <h2 id="customerModalTitle">Address Book</h2>
+        <button type="button" class="modal-close" data-close-modal="customerModal" aria-label="Close">x</button>
+      </div>
+      <div class="customer-modal-grid">
+        <section class="customer-lookup">
+          <h3 id="customerModalBusiness">GS STEEL FURNITURE</h3>
+          <label>Type Here Customer Name
+            <input id="modalCustomerSearch" placeholder="Search customer or mobile">
+          </label>
+          <div class="modal-list" id="modalCustomerResults"></div>
+          <div class="modal-history" id="modalCustomerHistory">Select a customer to fill receipt details.</div>
+        </section>
+        <form autocomplete="off" id="customerModalForm" class="new-customer-form">
+          <h3>Only For New Customer</h3>
+          <label>Cust-ID<input name="id" readonly></label>
+          <label>Name<input name="name" required></label>
+          <label>Mobile No<input name="mobile"></label>
+          <label>Address<input name="address"></label>
+          <label>Near by Location<input name="nearby"></label>
+          <label>City<input name="city" value="Tufanganj"></label>
+          <label>State<input name="state" value="West Bengal"></label>
+          <label>State Code<input name="stateCode" placeholder="19" inputmode="numeric" pattern="\d{2}" maxlength="2"></label>
+          <label>PIN<input name="pin"></label>
+          <label>GSTIN<input name="gstin"></label>
+          <div class="modal-actions">
+            <button type="submit">Save To Address Book</button>
+            <button type="button" class="secondary" data-close-modal="customerModal">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="transactionModal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="transactionModalTitle">
+      <div class="modal-head">
+        <h2 id="transactionModalTitle">Edit Transaction</h2>
+        <button type="button" class="modal-close" data-close-modal="transactionModal" aria-label="Close">x</button>
+      </div>
+      <form autocomplete="off" id="transactionEditForm" class="modal-body">
+        <input type="hidden" name="ledgerIndex">
+        <div class="form-grid">
+          <label>Memo<input name="memo" required></label>
+          <label>Date<input name="date" type="date"></label>
+          <label>Head<input name="head"></label>
+          <label>Particulars<input name="party"></label>
+          <label>Customer ID<input name="customerId"></label>
+          <label>Billed<input name="billed" type="number" min="0" step="0.01"></label>
+          <label>Cash<input name="cash" type="number" min="0" step="0.01"></label>
+          <label>Bank<input name="bank" type="number" min="0" step="0.01"></label>
+          <label>Finance<input name="bajaj" type="number" min="0" step="0.01"></label>
+          <label>Expense<input name="expense" type="number" min="0" step="0.01"></label>
+          <label>Profit<input name="profit" type="number" step="0.01" ></label>
+          <label class="span-2">Remarks<input name="remark"></label>
+          <label>Mobile<input name="mobile"></label>
+        </div>
+        <div class="modal-actions">
+          <button type="submit">Update Transaction</button>
+          <button type="button" class="secondary" data-close-modal="transactionModal">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="dueModal" hidden>
+    <section class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="dueModalTitle">
+      <div class="modal-head">
+        <h2 id="dueModalTitle">Edit Due</h2>
+        <button type="button" class="modal-close" data-close-modal="dueModal" aria-label="Close">x</button>
+      </div>
+      <form autocomplete="off" id="dueEditForm" class="modal-body">
+        <input type="hidden" name="dueIndex">
+        <label>Date<input name="date" type="date"></label>
+        <label>Customer<input name="name" required></label>
+        <label>Head<input name="head"></label>
+        <label>Memo No.<input name="memo"></label>
+        <label>Due Amount<input name="due" type="number" min="0" step="0.01"></label>
+        <label>Paid Amount<input name="paid" type="number" min="0" step="0.01"></label>
+        <label>Remark<input name="remark"></label>
+        <div class="modal-actions">
+          <button type="submit">Update Due</button>
+          <button type="button" class="secondary" data-close-modal="dueModal">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="addressBookModal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="addressBookModalTitle">
+      <div class="modal-head">
+        <h2 id="addressBookModalTitle">Edit Address Book</h2>
+        <button type="button" class="modal-close" data-close-modal="addressBookModal" aria-label="Close">x</button>
+      </div>
+      <form autocomplete="off" id="addressBookEditForm" class="modal-body">
+        <input type="hidden" name="customerIndex">
+        <div class="form-grid">
+          <label>Cust-ID<input name="id" required></label>
+          <label>Name<input name="name" required></label>
+          <label>Mobile No<input name="mobile"></label>
+          <label>Address<input name="address"></label>
+          <label>Near by Location<input name="nearby"></label>
+          <label>City<input name="city"></label>
+          <label>State<input name="state"></label>
+          <label>State Code<input name="stateCode" inputmode="numeric" pattern="\d{2}" maxlength="2"></label>
+          <label>PIN<input name="pin"></label>
+          <label>GSTIN<input name="gstin"></label>
+        </div>
+        <div class="modal-actions">
+          <button type="submit">Update Customer</button>
+          <button type="button" class="secondary" data-close-modal="addressBookModal">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="itemModal" hidden>
+    <section class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
+      <div class="modal-head">
+        <h2 id="itemModalTitle">Edit Item</h2>
+        <button type="button" class="modal-close" data-close-modal="itemModal" aria-label="Close">x</button>
+      </div>
+      <form autocomplete="off" id="itemEditForm" class="modal-body">
+        <input type="hidden" name="itemKey">
+        <input type="hidden" name="originalName">
+        <label>Item Name<input name="name" required></label>
+        <label>Group<input name="group" placeholder="e.g. Steel" required></label>
+        <label>HSN<input name="hsn"></label>
+        <label>Unit
+          <select name="unit" required>
+            <option value="Pcs">Pcs</option>
+            <option value="Cft">Cft</option>
+            <option value="Ton">Ton</option>
+            <option value="Kg">Kg</option>
+            <option value="Dozen">Dozen</option>
+          </select>
+        </label>
+        <label>Rate<input name="rate" type="number" min="0" step="0.01"></label>
+        <div class="modal-actions">
+          <button type="submit">Update Item</button>
+          <button type="button" class="secondary" data-close-modal="itemModal">Cancel</button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="itemRateHistoryModal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="itemRateHistoryTitle">
+      <div class="modal-head">
+        <h2 id="itemRateHistoryTitle">Item Rate History</h2>
+        <button type="button" class="modal-close" data-close-modal="itemRateHistoryModal" aria-label="Close">x</button>
+      </div>
+      <div class="modal-body">
+        <div class="rate-history-summary" id="itemRateHistorySummary"></div>
+        <div class="modal-history-table">
+          <table id="itemRateHistoryTable"></table>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="gstUploadedPeriodsModal" hidden>
+    <section class="modal gst-uploaded-periods-modal" role="dialog" aria-modal="true" aria-labelledby="gstUploadedPeriodsTitle">
+      <div class="modal-head">
+        <div><h2 id="gstUploadedPeriodsTitle">Uploaded GST return periods</h2><p class="panel-subtitle">Months and quarters available from imported return files.</p></div>
+        <button type="button" class="modal-close" data-close-modal="gstUploadedPeriodsModal" aria-label="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="gst-uploaded-period-summary" id="gstUploadedPeriodsSummary"></div>
+        <div class="table-wrap"><table id="gstUploadedPeriodsTable"></table></div>
+        <div class="modal-actions"><button type="button" class="secondary" data-close-modal="gstUploadedPeriodsModal">Close</button></div>
+      </div>
+    </section>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="js/core/state.js"></script>
+  <script src="js/core/api-auth.js"></script>
+  <script src="js/components/ui.js"></script>
+  <script src="js/pages/dashboard-sales.js"></script>
+  <script src="js/pages/gst-returns.js"></script>
+  <script src="js/pages/tally-gst-compare.js"></script>
+  <script src="js/pages/gst-overview.js"></script>
+  <script src="js/pages/transfers.js"></script>
+  <script src="js/features/settings-notes.js"></script>
+  <script src="js/features/receipts-forms.js"></script>
+  <script src="js/pages/quotations.js"></script>
+  <script src="js/pages/ledger.js"></script>
+  <script src="js/pages/dues.js"></script>
+  <script src="js/pages/customers-items.js"></script>
+  <script src="js/pages/cheques.js"></script>
+  <script src="js/pages/suppliers-purchases.js"></script>
+  <script src="js/pages/accounts-manager.js"></script>
+  <script src="js/pages/audit.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
