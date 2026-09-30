@@ -1,6 +1,7 @@
 const CASHBOOK_BANK_ACCOUNTS_KEY = "cashbookBankAccounts";
 const CASHBOOK_OPENINGS_KEY = "cashbookOpeningBalances";
 let cashbookRangeInitialized = false;
+let cashbookStatementRows = [];
 
 function cashbookBankAccounts() {
   const saved = getSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY);
@@ -33,6 +34,99 @@ function renderCashbookBankAccountSelects() {
     else if (accounts.length) select.value = cashbookDefaultBankAccountId();
     select.dataset.preserveSelection = "true";
   });
+  const reconcileSelect = $("#cashbookReconcileAccount");
+  if (reconcileSelect) {
+    const selectedId = reconcileSelect.value || cashbookDefaultBankAccountId();
+    reconcileSelect.innerHTML = cashbookBankAccounts().map(account => `<option value="${html(account.id)}">${html(account.name)}</option>`).join("");
+    reconcileSelect.value = cashbookBankAccounts().some(account => account.id === selectedId) ? selectedId : cashbookDefaultBankAccountId();
+    if (!cashbookStatementRows.length) loadReconciliationStatement(reconcileSelect.value);
+  }
+}
+
+function parseBankCsv(source) {
+  const rows = [];
+  let row = [], cell = "", quoted = false;
+  for (let i = 0; i < source.length; i += 1) {
+    const ch = source[i];
+    if (ch === '"' && quoted && source[i + 1] === '"') { cell += '"'; i += 1; }
+    else if (ch === '"') quoted = !quoted;
+    else if (ch === "," && !quoted) { row.push(cell.trim()); cell = ""; }
+    else if ((ch === "\n" || ch === "\r") && !quoted) {
+      if (ch === "\r" && source[i + 1] === "\n") i += 1;
+      row.push(cell.trim()); cell = "";
+      if (row.some(value => value !== "")) rows.push(row);
+      row = [];
+    } else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell.trim()); if (row.some(value => value !== "")) rows.push(row); }
+  if (rows.length < 2) return [];
+  const headers = rows.shift().map(value => value.toLowerCase().replace(/[^a-z0-9]/g, ""));
+  const find = names => headers.findIndex(header => names.includes(header));
+  const dateIndex = find(["date", "transactiondate", "valuedate"]);
+  const descIndex = find(["description", "particulars", "narration", "details", "remark"]);
+  const amountIndex = find(["amount", "transactionamount"]);
+  const debitIndex = find(["debit", "withdrawal", "withdrawals"]);
+  const creditIndex = find(["credit", "deposit", "deposits"]);
+  if (dateIndex < 0 || (amountIndex < 0 && debitIndex < 0 && creditIndex < 0)) return [];
+  const parseAmount = value => Number(String(value || "").replace(/[₹,\s]/g, "")) || 0;
+  const parseDate = value => {
+    const raw = String(value || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const match = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+    if (!match) return "";
+    const year = match[3].length === 2 ? `20${match[3]}` : match[3];
+    return `${year}-${String(Number(match[2])).padStart(2, "0")}-${String(Number(match[1])).padStart(2, "0")}`;
+  };
+  return rows.map((cells, index) => {
+    const debit = debitIndex >= 0 ? parseAmount(cells[debitIndex]) : 0;
+    const credit = creditIndex >= 0 ? parseAmount(cells[creditIndex]) : 0;
+    const rawAmount = amountIndex >= 0 ? parseAmount(cells[amountIndex]) : 0;
+    return { id: `statement-${index}`, date: parseDate(cells[dateIndex]), description: descIndex >= 0 ? cells[descIndex] || "" : "", amount: credit || debit || Math.abs(rawAmount), direction: credit || (!debit && rawAmount >= 0) ? "credit" : "debit" };
+  }).filter(row => row.date && row.amount > 0);
+}
+
+function reconcileBankStatement(rows) {
+  const accountId = text($("#cashbookReconcileAccount")?.value);
+  const { labels } = cashbookAccountMap();
+  const legs = data.transactions().filter(row => text(row.bankAccountId) === accountId).flatMap(row => cashbookMovementLegs(row, labels)).filter(row => row.channel === "Online");
+  const used = new Set();
+  const result = rows.map(row => {
+    const targetDirection = row.direction;
+    const candidates = legs.map((leg, index) => ({ leg, index })).filter(({ leg, index }) => !used.has(index) && leg.direction === targetDirection && Math.abs(leg.amount - row.amount) < 0.01 && leg.date === row.date);
+    if (candidates.length === 1) { used.add(candidates[0].index); return { ...row, status: "Matched", cashbook: candidates[0].leg.memo || candidates[0].leg.party }; }
+    return { ...row, status: candidates.length > 1 ? "Multiple matches" : "Unmatched", cashbook: candidates.length > 1 ? `${candidates.length} candidates` : "—" };
+  });
+  const matched = result.filter(row => row.status === "Matched").length;
+  $("#cashbookReconcileSummary").textContent = `${matched} matched · ${result.length - matched} need review · ${result.length} statement rows`;
+  table($("#cashbookReconcileTable"), [
+    { label: "Date", key: "date" }, { label: "Description", key: "description" }, { label: "Direction", key: "direction", render: row => row.direction === "credit" ? "Credit" : "Debit" },
+    { label: "Amount", key: "amount", num: true, render: row => money2(row.amount) }, { label: "Cashbook match", key: "cashbook" }, { label: "Status", key: "status", render: row => `<strong class="cashbook-match-${row.status === "Matched" ? "yes" : "no"}">${html(row.status)}</strong>` }
+  ], result);
+}
+
+async function saveReconciliationStatement(accountId, rows) {
+  const saved = getSettingValue("cashbookReconciliationStatements") || {};
+  saved[accountId] = { rows, importedAt: new Date().toISOString() };
+  await saveSettingValue("cashbookReconciliationStatements", saved);
+}
+
+function loadReconciliationStatement(accountId) {
+  if (!accountId) return;
+  const saved = getSettingValue("cashbookReconciliationStatements") || {};
+  cashbookStatementRows = Array.isArray(saved[accountId]?.rows) ? saved[accountId].rows : [];
+  reconcileBankStatement(cashbookStatementRows);
+}
+
+async function clearReconciliationStatement() {
+  const accountId = text($("#cashbookReconcileAccount")?.value);
+  if (!accountId) return;
+  const saved = getSettingValue("cashbookReconciliationStatements") || {};
+  delete saved[accountId];
+  await saveSettingValue("cashbookReconciliationStatements", saved);
+  cashbookStatementRows = [];
+  $("#cashbookStatementFile").value = "";
+  reconcileBankStatement([]);
+  toast("Saved bank statement cleared.");
 }
 
 function cashbookOpeningSnapshots() {
@@ -251,4 +345,22 @@ function bindCashbook() {
     renderCashbook();
   });
   $("#cashbookTo")?.addEventListener("change", renderCashbook);
+  $("#cashbookReconcileAccount")?.addEventListener("change", () => {
+    loadReconciliationStatement(text($("#cashbookReconcileAccount")?.value));
+  });
+  $("#cashbookStatementFile")?.addEventListener("change", event => {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rows = parseBankCsv(String(reader.result || ""));
+      if (!rows.length) { toast("CSV needs a date column and amount, debit, or credit column."); return; }
+      cashbookStatementRows = rows;
+      const accountId = text($("#cashbookReconcileAccount")?.value);
+      saveReconciliationStatement(accountId, rows).catch(error => toast(error.message || "Could not save statement."));
+      reconcileBankStatement(rows);
+    };
+    reader.readAsText(file);
+  });
+  $("#cashbookClearStatement")?.addEventListener("click", withBusyClick(clearReconciliationStatement, "Clearing..."));
 }

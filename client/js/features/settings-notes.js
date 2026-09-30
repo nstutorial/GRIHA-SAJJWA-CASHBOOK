@@ -456,6 +456,10 @@ function fillAccountDetailsSettings() {
   }));
   $$('[data-delete-bank-account]', list || document).forEach(button => button.addEventListener("click", () => withBusyControl(button, async () => {
     const deletedId = button.dataset.deleteBankAccount;
+    if (data.transactions().some(row => text(row.bankAccountId) === deletedId)) return toast("This account is used by transactions. Reassign those transactions before removing it.");
+    const importedStatements = getSettingValue("cashbookReconciliationStatements") || {};
+    if (importedStatements[deletedId]?.rows?.length) return toast("This account has a saved reconciliation statement. Clear it from Cash Book before removing the account.");
+    if (data.transactions().some(row => text(row.bankAccountId) === deletedId)) return toast("This account is used by transactions. Reassign those transactions before removing it.");
     const accounts = cashbookBankAccounts().filter(account => account.id !== deletedId);
     if (!accounts.length) return toast("Keep at least one bank account.");
     await saveSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY, accounts);
@@ -694,6 +698,8 @@ async function renderUserManagement() {
     return;
   }
   if (!currentUserIsAdmin()) {
+    const createUserForm = $("#createUserForm");
+    if (createUserForm) createUserForm.hidden = true;
     tableNode.innerHTML = `
       <tbody>
         <tr><td>Only admin users can view the user list.</td></tr>
@@ -701,6 +707,8 @@ async function renderUserManagement() {
     `;
     return;
   }
+  const createUserForm = $("#createUserForm");
+  if (createUserForm) createUserForm.hidden = false;
   if (settingsUsersLoading) return;
   settingsUsersLoading = true;
   tableNode.innerHTML = `
@@ -780,6 +788,19 @@ async function resetUserPassword(userId) {
   await apiSetUserPassword(userId, password);
   input.value = "";
   toast("User password changed.");
+}
+
+async function createUserFromSettings(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    await apiCreateUser({ name: text(form.name.value), username: text(form.username.value).toLowerCase(), password: form.password.value, role: form.role.value });
+    form.reset();
+    await renderUserManagement();
+    toast("User account created.");
+  } catch (error) {
+    toast(error.details?.error || error.message || "Could not create user.");
+  }
 }
 
 async function toggleUserBlocked(userId, blocked) {

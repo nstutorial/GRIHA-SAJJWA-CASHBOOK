@@ -1124,6 +1124,23 @@ h2 { font-size: 18px; }
   margin-top: 14px;
 }
 
+.cashbook-reconcile-panel {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel, #fff);
+}
+
+.cashbook-reconcile-panel h3 { margin: 0 0 5px; }
+.cashbook-reconcile-controls { display: flex; flex-wrap: wrap; gap: 14px; margin: 14px 0; }
+.cashbook-reconcile-controls label { min-width: 220px; }
+.cashbook-match-yes { color: #147044; }
+.cashbook-match-no { color: #a13f28; }
+.create-user-form { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)) auto; align-items: end; gap: 10px; margin: 12px 0 18px; }
+@media (max-width: 900px) { .create-user-form { grid-template-columns: repeat(2, minmax(130px, 1fr)); } }
+@media (max-width: 560px) { .create-user-form { grid-template-columns: 1fr; } }
+
 .memo-settings-grid {
   display: grid;
   gap: 14px;

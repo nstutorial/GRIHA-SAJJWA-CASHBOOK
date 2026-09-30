@@ -232,6 +232,7 @@ function bindAuthForms() {
   });
   $("#loginForm")?.addEventListener("submit", withBusySubmit(handleLogin, "Logging in..."));
   $("#signupForm")?.addEventListener("submit", withBusySubmit(handleSignup, "Creating..."));
+  refreshSignupAvailability();
   $("#logoutBtn")?.addEventListener("click", () => {
     clearLocalAppData();
     window.location.reload();
@@ -288,9 +289,28 @@ async function apiVerifyActionLockPassword(password) {
   });
 }
 
+async function refreshSignupAvailability() {
+  const signupTab = $("[data-auth-mode='signup']");
+  if (!signupTab) return;
+  try {
+    const status = await authRequest("/api/auth/signup-status");
+    signupTab.hidden = !status.enabled;
+    if (!status.enabled && $("#signupForm") && !$("#signupForm").hidden) switchAuthMode("login");
+    const subtitle = $("#authSubtitle");
+    if (!status.enabled && subtitle) subtitle.textContent = "Public signup is closed. Contact the administrator for access.";
+  } catch {
+    signupTab.hidden = true;
+  }
+}
+
 async function apiListUsers() {
   if (!apiAvailable) return [];
   return apiRequest("/api/auth/users");
+}
+
+async function apiCreateUser(user) {
+  if (!apiAvailable) return null;
+  return apiRequest("/api/auth/users", { method: "POST", body: JSON.stringify(user) });
 }
 
 async function apiSetUserBlocked(id, blocked) {

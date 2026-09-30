@@ -286,6 +286,11 @@ async function saveReceipt(event) {
   if (memoSettings.auto && !isEditing) {
     form.memo.value = formatReceiptMemo(memoSettings.nextNo, memoSettings);
   }
+  if (hasDuplicateTransactionVoucher(form.memo.value, form.date.value, form.customer.value, editingReceiptTransaction)) {
+    toast("This voucher number already exists for this date and customer.");
+    form.memo.focus();
+    return;
+  }
   const selectedCustomer = findCustomerFromReceiptInput(form.customer.value);
   if (!selectedCustomer) {
     validateReceiptCustomer(true);
@@ -339,6 +344,7 @@ async function saveReceipt(event) {
       seed.transactions.push(await apiCreate("transactions", tx));
     } else {
       user.transactions.push(tx);
+      recordLocalAudit({ action: "create", collection: "transactions", after: tx });
     }
 
     const due = calc.due > 0
@@ -378,6 +384,16 @@ async function saveReceipt(event) {
     setReceiptSaving(false);
     toast(error.message || "Receipt save failed.");
   }
+}
+
+function hasDuplicateTransactionVoucher(memo, date, party, editing = null) {
+  const normalizedMemo = text(memo).toLowerCase();
+  const normalizedParty = text(party).toLowerCase();
+  if (!normalizedMemo || !date) return false;
+  return data.transactions().some(row => text(row._id) !== text(editing?._id)
+    && text(row.memo).toLowerCase() === normalizedMemo
+    && text(row.date) === text(date)
+    && text(row.party).toLowerCase() === normalizedParty);
 }
 
 function printReceipt(doPrint = true) {
@@ -865,6 +881,7 @@ function bindForms() {
   $("#saveActionLockBtn")?.addEventListener("click", withBusyClick(() => saveActionLockPassword(), "Saving..."));
   $("#changeOwnPasswordBtn")?.addEventListener("click", withBusyClick(() => changeOwnPassword(), "Saving..."));
   $("#refreshUsersBtn")?.addEventListener("click", withBusyClick(() => renderUserManagement(), "Refreshing..."));
+  $("#createUserForm")?.addEventListener("submit", withBusySubmit(createUserFromSettings, "Creating..."));
   $("#settingsAddReceiptHeadBtn").addEventListener("click", withBusyClick(() => addHeadFromSettings("receipt"), "Saving..."));
   $("#settingsAddPaymentHeadBtn").addEventListener("click", withBusyClick(() => addHeadFromSettings("payment"), "Saving..."));
   $("#settingsReceiptHeadInput").addEventListener("keydown", event => {
@@ -949,10 +966,15 @@ async function savePayment(event) {
   const f = event.currentTarget;
   const isEditing = Boolean(editingPaymentTransaction);
   const isFundReceived = Boolean(f.fundReceived?.checked);
-  const voucherWindow = isEditing || isFundReceived ? null : window.open("", "_blank");
   const memoSettings = paymentMemoSettings();
   if (memoSettings.auto && !isEditing) f.memo.value = formatPaymentMemo(memoSettings.nextNo, memoSettings);
   applyPaymentDueMode();
+  if (hasDuplicateTransactionVoucher(f.memo.value, f.date.value, f.party.value, editingPaymentTransaction)) {
+    toast("This voucher number already exists for this date and party.");
+    f.memo.focus();
+    return;
+  }
+  const voucherWindow = isEditing || isFundReceived ? null : window.open("", "_blank");
   if (isFundReceived) {
     const cashReceived = num(f.amount.value);
     const bankReceived = num(f.bank.value);
@@ -983,6 +1005,7 @@ async function savePayment(event) {
       seed.transactions.push(await apiCreate("transactions", transaction));
     } else {
       user.transactions.push(transaction);
+      recordLocalAudit({ action: "create", collection: "transactions", after: transaction });
       saveUser();
     }
     await advancePaymentMemoNumber();
@@ -1036,6 +1059,7 @@ async function savePayment(event) {
     seed.transactions.push(await apiCreate("transactions", transaction));
   } else {
     user.transactions.push(transaction);
+    recordLocalAudit({ action: "create", collection: "transactions", after: transaction });
   }
   let due = null;
   if (isStaffDue && transaction.expense > 0) {

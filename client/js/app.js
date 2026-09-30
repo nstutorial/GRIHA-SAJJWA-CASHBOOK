@@ -262,15 +262,38 @@ function bindExports() {
     if (!file) return;
     event.target.disabled = true;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        user = normalizeBackupPayload(JSON.parse(reader.result));
-        saveUser();
+        const backup = normalizeBackupPayload(JSON.parse(reader.result));
+        if (!window.confirm("Import this backup? Existing browser-only data will be replaced. When connected to Cloud, records from the backup will be merged into the server; records missing from the backup will not be deleted.")) return;
+        if (apiAvailable) {
+          const synced = await apiRequest("/api/sync", { method: "POST", body: JSON.stringify(backup) });
+          const business = seed?.business || { name: "G.S. STEEL FURNITURE", place: "Tufanganj, CoochBehar", state: "West Bengal", stateCode: "19", gstin: "19AATFG0007G1ZH" };
+          seed = { business, ...(synced.bootstrap || {}) };
+          user = emptyUserData();
+          saveUser();
+          apiAvailable = storageMode !== "local";
+          apiConnected = true;
+          for (const row of backup.gstr1Returns || []) await apiRequest("/api/gst-returns/gstr1/import", { method: "POST", body: JSON.stringify({ ...row, fileName: row.sourceFile }) });
+          for (const row of backup.gstr3bReturns || []) await apiRequest("/api/gst-returns/gstr3b/import", { method: "POST", body: JSON.stringify({ ...row, fileName: row.sourceFile }) });
+          if (backup.gst2bInvoices?.length) await apiRequest("/api/gst-returns/gstr2b/import", { method: "POST", body: JSON.stringify({ invoices: backup.gst2bInvoices, fileName: "Restored backup" }) });
+          for (const kind of ["sales", "purchases"]) {
+            const register = backup.tallyGstImports?.[kind];
+            if (register?.rows?.length) await apiRequest("/api/gst-returns/tally-imports/import", { method: "POST", body: JSON.stringify({ kind, rows: register.rows, fileName: register.sourceFile }) });
+          }
+        } else {
+          user = backup;
+          saveUser();
+        }
+        gstr1Returns = backup.gstr1Returns || [];
+        gstr3bReturns = backup.gstr3bReturns || [];
+        gst2bStatement = backup.gst2bInvoices?.length ? { invoices: backup.gst2bInvoices } : null;
+        tallyRegisterImports = backup.tallyGstImports || { sales: null, purchases: null };
         loadDenominationSettings();
         fillSettingsForm();
         renderBusinessBrand();
         renderAll();
-        toast("Full backup imported.");
+        toast(apiAvailable ? "Backup merged into Cloud." : "Backup restored in this browser.");
       } catch {
         toast("Could not import backup. Please choose a valid JSON backup file.");
       } finally {
@@ -290,6 +313,10 @@ function bindExports() {
 async function init() {
   applyTheme();
   loadUser();
+  gstr1Returns = user.gstr1Returns || [];
+  gstr3bReturns = user.gstr3bReturns || [];
+  gst2bStatement = user.gst2bInvoices?.length ? { invoices: user.gst2bInvoices } : null;
+  tallyRegisterImports = user.tallyGstImports || { sales: null, purchases: null };
   bindAuthForms();
   if (!authToken) {
     showAuthView("login");

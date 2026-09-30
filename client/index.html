@@ -111,8 +111,8 @@
       <form id="signupForm" class="auth-form" autocomplete="off" hidden>
         <label>Name<input name="name" required placeholder="Your name"></label>
         <label>Username<input name="username" required placeholder="admin"></label>
-        <label>Password<input name="password" type="password" minlength="6" required placeholder="Minimum 6 characters"></label>
-        <label>Confirm Password<input name="confirmPassword" type="password" minlength="6" required placeholder="Retype password"></label>
+        <label>Password<input name="password" type="password" minlength="8" required placeholder="Minimum 8 characters"></label>
+        <label>Confirm Password<input name="confirmPassword" type="password" minlength="8" required placeholder="Retype password"></label>
         <button type="submit">Create account</button>
       </form>
     </div>
@@ -840,6 +840,12 @@
                   <h4>User List</h4>
                   <button id="refreshUsersBtn" type="button" class="secondary">Refresh users</button>
                 </div>
+                <form id="createUserForm" class="create-user-form" hidden>
+                  <label>Name<input name="name" required></label><label>Username<input name="username" required minlength="3" maxlength="64"></label>
+                  <label>Temporary password<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
+                  <label>Role<select name="role"><option value="user">User</option><option value="admin">Admin</option></select></label>
+                  <button type="submit">Create user</button>
+                </form>
                 <div class="table-wrap">
                   <table id="settingsUsersTable"></table>
                 </div>
@@ -904,7 +910,9 @@
           <input id="auditSearch" placeholder="Search user, page, memo, customer">
           <select id="auditAction">
             <option value="">All actions</option>
+            <option value="create">Create</option>
             <option value="edit">Edit</option>
+            <option value="update">Update</option>
             <option value="delete">Delete</option>
           </select>
           <select id="auditCollection">
@@ -942,6 +950,14 @@
           <section class="cashbook-flow-panel cashbook-debit-panel"><div class="cashbook-flow-heading"><div><h3>Debit · Money Out</h3><p class="panel-subtitle">Expenses, withdrawals, and other payments</p></div><strong id="cashbookDebitTotal"></strong></div><div id="cashbookDebitGroups" class="cashbook-groups"></div></section>
         </div>
         <section class="cashbook-closing-panel"><div><h3>Closing balances</h3><p id="cashbookClosingDateLabel" class="panel-subtitle"></p></div><div id="cashbookClosingBalances" class="cashbook-closing-grid"></div></section>
+        <section class="cashbook-reconcile-panel">
+          <h3>Bank reconciliation</h3>
+          <p class="panel-subtitle">Upload a CSV with Date and Amount (signed) or Debit/Credit columns. Dates may be ISO (YYYY-MM-DD) or DD/MM/YYYY. Matches use account, date, direction, and amount; review every exception.</p>
+          <div class="cashbook-reconcile-controls"><label>Bank account<select id="cashbookReconcileAccount"></select></label><label>Statement CSV<input id="cashbookStatementFile" type="file" accept=".csv,text/csv"></label></div>
+          <button type="button" class="secondary" id="cashbookClearStatement">Clear saved statement</button>
+          <div id="cashbookReconcileSummary" class="panel-subtitle" role="status"></div>
+          <div class="table-wrap"><table id="cashbookReconcileTable"></table></div>
+        </section>
       </section>
     </section>
 

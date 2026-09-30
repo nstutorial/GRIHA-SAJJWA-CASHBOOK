@@ -473,6 +473,10 @@ function fullBackupData() {
     notes: data.notes(),
     settings: mergedSettings(),
     auditLogs: data.auditLogs(),
+    gstr1Returns: typeof gstr1Returns !== "undefined" ? gstr1Returns : [],
+    gstr3bReturns: typeof gstr3bReturns !== "undefined" ? gstr3bReturns : [],
+    gst2bInvoices: typeof gst2bStatement !== "undefined" ? gst2bStatement?.invoices || [] : [],
+    tallyGstImports: typeof tallyRegisterImports !== "undefined" ? tallyRegisterImports : { sales: null, purchases: null },
     manualCreditors: data.manualCreditors(),
     manualChartAccounts: data.manualChartAccounts(),
     businesses: data.businesses(),
@@ -512,7 +516,7 @@ function mergedSettings() {
   const byKey = new Map();
   [...seedRows("settings"), ...(user.settings || [])].forEach(setting => {
     const key = text(setting?.key);
-    if (key) byKey.set(key, setting);
+    if (key && key !== "initialAdminClaim") byKey.set(key, setting);
   });
   return [...byKey.values()];
 }
@@ -521,7 +525,7 @@ function normalizeSettings(rows) {
   const byKey = new Map();
   (rows || []).forEach(setting => {
     const key = text(setting?.key);
-    if (key) byKey.set(key, setting);
+    if (key && key !== "initialAdminClaim") byKey.set(key, setting);
   });
   return [...byKey.values()];
 }
@@ -542,6 +546,10 @@ function normalizeBackupPayload(payload) {
     notes: (source.notes || []).map(normalizeNote),
     settings: normalizeSettings(source.settings),
     auditLogs: source.auditLogs || [],
+    gstr1Returns: Array.isArray(source.gstr1Returns) ? source.gstr1Returns : [],
+    gstr3bReturns: Array.isArray(source.gstr3bReturns) ? source.gstr3bReturns : [],
+    gst2bInvoices: Array.isArray(source.gst2bInvoices) ? source.gst2bInvoices : [],
+    tallyGstImports: source.tallyGstImports && typeof source.tallyGstImports === "object" ? source.tallyGstImports : { sales: null, purchases: null },
     manualCreditors: (source.manualCreditors || []).map(row => ({ _id: text(row._id), entryId: text(row.entryId ?? row.id), party: text(row.party), fy: text(row.fy), balance: num(row.balance) })),
     manualChartAccounts: (source.manualChartAccounts || []).map(row => ({ _id: text(row._id), entryId: text(row.entryId ?? row.id), particular: text(row.particular), side: text(row.side), fy: text(row.fy), amount: num(row.amount) })),
     businesses: source.businesses || [],
@@ -571,6 +579,10 @@ function emptyUserData() {
     notes: [],
     settings: [],
     auditLogs: [],
+    gstr1Returns: [],
+    gstr3bReturns: [],
+    gst2bInvoices: [],
+    tallyGstImports: { sales: null, purchases: null },
     manualCreditors: [],
     manualChartAccounts: [],
     businesses: [],

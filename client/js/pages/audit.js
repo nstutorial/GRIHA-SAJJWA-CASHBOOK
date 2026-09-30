@@ -1,6 +1,11 @@
 ﻿function auditCollectionLabel(value) {
   const labels = {
     transactions: "Transaction Ledger",
+    backup: "Backup / Restore",
+    gstr1Returns: "GSTR-1 Imports",
+    gstr3bReturns: "GSTR-3B Imports",
+    gst2bInvoices: "GSTR-2B Imports",
+    tallyGstImports: "Tally GST Imports",
     dues: "Due Register",
     customers: "Address Book",
     cheques: "Cheque DropBox",
