@@ -446,48 +446,69 @@ function fillAccountDetailsSettings() {
       <div><strong>${html(account.name)}</strong>${account.id === defaultId ? `<span class="head-chip-lock">Default for invoices</span>` : ""}<small>${html([account.bankName, account.accountNumber && `A/C ${account.accountNumber}`, account.ifsc && `IFSC ${account.ifsc}`, account.branch, account.upi].filter(Boolean).join(" · ") || "No bank details added")}</small></div>
       <div class="settings-bank-account-actions"><button type="button" class="secondary" data-edit-bank-account="${html(account.id)}">Edit</button><button type="button" class="secondary" data-delete-bank-account="${html(account.id)}"${accounts.length <= 1 ? " disabled title=\"Keep at least one account\"" : ""}>Remove</button></div>
     </article>`).join("") || `<p class="panel-subtitle">No bank accounts yet. Add an account to show it on invoices and receipt forms.</p>`;
-  $$('[data-edit-bank-account]', list || document).forEach(button => button.addEventListener("click", () => {
-    const account = cashbookAccountById(button.dataset.editBankAccount);
-    const editor = $("#settingsBankAccountForm");
-    if (!account || !editor) return;
-    ["id", "name", "bankName", "accountNumber", "ifsc", "branch", "upi"].forEach(key => { if (editor.elements.namedItem(key)) editor.elements.namedItem(key).value = account[key] || ""; });
-    editor.closest("details")?.setAttribute("open", "");
-    editor.name.focus();
-  }));
-  $$('[data-delete-bank-account]', list || document).forEach(button => button.addEventListener("click", () => withBusyControl(button, async () => {
-    const deletedId = button.dataset.deleteBankAccount;
-    if (data.transactions().some(row => text(row.bankAccountId) === deletedId)) return toast("This account is used by transactions. Reassign those transactions before removing it.");
-    const importedStatements = getSettingValue("cashbookReconciliationStatements") || {};
-    if (importedStatements[deletedId]?.rows?.length) return toast("This account has a saved reconciliation statement. Clear it from Cash Book before removing the account.");
-    if (data.transactions().some(row => text(row.bankAccountId) === deletedId)) return toast("This account is used by transactions. Reassign those transactions before removing it.");
-    const accounts = cashbookBankAccounts().filter(account => account.id !== deletedId);
-    if (!accounts.length) return toast("Keep at least one bank account.");
-    await saveSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY, accounts);
-    if (text(getSettingValue("cashbookDefaultBankAccountId")) === deletedId) {
-      await saveSettingValue("cashbookDefaultBankAccountId", accounts[0].id);
-      await saveSettingValue("accountDetails", accounts[0]);
-    }
-    fillAccountDetailsSettings();
-    renderCashbookBankAccountSelects();
-    toast("Bank account removed.");
-  }, "Removing...")));
+  const editor = $("#settingsBankAccountForm");
+  const editorDetails = editor?.closest("details");
+  if (editor && editorDetails && !editor.elements.namedItem("id").value) {
+    editorDetails.hidden = false;
+  }
+  if (list && !list.dataset.accountActionsBound) {
+    list.dataset.accountActionsBound = "true";
+    list.addEventListener("click", event => {
+      const button = event.target.closest("[data-edit-bank-account], [data-delete-bank-account]");
+      if (!button || !list.contains(button)) return;
+      if (button.hasAttribute("data-edit-bank-account")) {
+        const account = cashbookAccountById(button.dataset.editBankAccount);
+        const editor = $("#settingsBankAccountForm");
+        if (!account || !editor) return;
+        ["id", "name", "bankName", "accountNumber", "ifsc", "branch", "upi"].forEach(key => { if (editor.elements.namedItem(key)) editor.elements.namedItem(key).value = account[key] || ""; });
+        editor.closest("details")?.setAttribute("open", "");
+        editor.elements.namedItem("name")?.focus();
+        return;
+      }
+      withBusyControl(button, async () => {
+        const deletedId = button.dataset.deleteBankAccount;
+        if (data.transactions().some(row => text(row.bankAccountId) === deletedId)) return toast("This account is used by transactions. Reassign those transactions before removing it.");
+        const importedStatements = getSettingValue("cashbookReconciliationStatements") || {};
+        if (importedStatements[deletedId]?.rows?.length) return toast("This account has a saved reconciliation statement. Clear it from Cash Book before removing the account.");
+        const accounts = cashbookBankAccounts().filter(account => account.id !== deletedId);
+        if (!accounts.length) return toast("Keep at least one bank account.");
+        try {
+          await saveSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY, accounts);
+          if (text(getSettingValue("cashbookDefaultBankAccountId")) === deletedId) {
+            await saveSettingValue("cashbookDefaultBankAccountId", accounts[0].id);
+            await saveSettingValue("accountDetails", accounts[0]);
+          }
+          fillAccountDetailsSettings();
+          renderCashbookBankAccountSelects();
+          toast("Bank account removed.");
+        } catch (error) {
+          toast(error.message || "Bank account could not be removed.");
+        }
+      }, "Removing...");
+    });
+  }
 }
 
 async function saveSettingsBankAccount(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const accounts = cashbookBankAccounts();
-  const id = text(form.id.value) || `bank-${Date.now().toString(36)}`;
+  const id = text(form.elements.namedItem("id").value) || `bank-${Date.now().toString(36)}`;
   const account = { id, name: text(form.name.value), bankName: text(form.bankName.value), accountNumber: text(form.accountNumber.value), ifsc: text(form.ifsc.value), branch: text(form.branch.value), upi: text(form.upi.value) };
   if (accounts.some(item => item.id !== id && item.name.toLowerCase() === account.name.toLowerCase())) return toast("An account with that name already exists.");
   const index = accounts.findIndex(item => item.id === id);
   if (index >= 0) accounts[index] = account;
   else accounts.push(account);
-  await saveSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY, accounts);
-  if (text(getSettingValue("cashbookDefaultBankAccountId")) === id) await saveSettingValue("accountDetails", account);
-  if (!text(getSettingValue("cashbookDefaultBankAccountId"))) {
-    await saveSettingValue("cashbookDefaultBankAccountId", id);
-    await saveSettingValue("accountDetails", account);
+  try {
+    await saveSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY, accounts);
+    if (text(getSettingValue("cashbookDefaultBankAccountId")) === id) await saveSettingValue("accountDetails", account);
+    if (!text(getSettingValue("cashbookDefaultBankAccountId"))) {
+      await saveSettingValue("cashbookDefaultBankAccountId", id);
+      await saveSettingValue("accountDetails", account);
+    }
+  } catch (error) {
+    toast(error.message || "Bank account could not be saved.");
+    return;
   }
   form.reset();
   form.closest("details")?.removeAttribute("open");
