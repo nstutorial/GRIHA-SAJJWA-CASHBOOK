@@ -708,6 +708,19 @@
               <label class="span-2">Default invoice account<select id="settingsDefaultBankAccount" name="defaultBankAccountId"></select></label>
             </div>
             <div id="settingsBankAccounts" class="settings-bank-accounts" aria-live="polite"></div>
+            <details class="settings-account-editor" id="settingsAccountEditor">
+              <summary>Add bank account</summary>
+              <form id="settingsBankAccountForm" class="settings-grid settings-grid-compact">
+                <input type="hidden" name="id">
+                <label>Account name<input name="name" placeholder="e.g. HDFC Current Account" required maxlength="80"></label>
+                <label>Bank name<input name="bankName" placeholder="Bank name"></label>
+                <label>Account number<input name="accountNumber" placeholder="Account number"></label>
+                <label>IFSC<input name="ifsc" placeholder="IFSC"></label>
+                <label>Branch<input name="branch" placeholder="Branch"></label>
+                <label class="span-2">UPI / Payment note<input name="upi" placeholder="UPI ID or payment note"></label>
+                <div class="actions span-2"><button type="submit">Save bank account</button><button type="reset" class="secondary">Clear</button></div>
+              </form>
+            </details>
           </section>
 
           <section class="settings-card">
@@ -888,19 +901,6 @@
           </section>
         </div>
       </form>
-      <details class="settings-account-editor" id="settingsAccountEditor">
-        <summary>Add or edit bank account</summary>
-        <form id="settingsBankAccountForm" class="settings-grid settings-grid-compact">
-          <input type="hidden" name="id">
-          <label>Account name<input name="name" placeholder="e.g. HDFC Current Account" required maxlength="80"></label>
-          <label>Bank name<input name="bankName" placeholder="Bank name"></label>
-          <label>Account number<input name="accountNumber" placeholder="Account number"></label>
-          <label>IFSC<input name="ifsc" placeholder="IFSC"></label>
-          <label>Branch<input name="branch" placeholder="Branch"></label>
-          <label class="span-2">UPI / Payment note<input name="upi" placeholder="UPI ID or payment note"></label>
-          <div class="actions span-2"><button type="submit">Save bank account</button><button type="reset" class="secondary">Clear</button></div>
-        </form>
-      </details>
     </section>
 
     <section id="audit" class="view">
