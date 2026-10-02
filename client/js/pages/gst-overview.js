@@ -32,6 +32,24 @@ function gstOverviewDateMatches(value, range) {
   return Boolean(date) && (!range.from || date >= range.from) && (!range.to || date <= range.to);
 }
 
+function gstOverviewTallyTotals(rows, kind) {
+  return rows.reduce((sum, row) => {
+    const igst = num(row.igst);
+    const cgst = num(row.cgst);
+    const sgst = num(row.sgst);
+    const cess = num(row.cess);
+    const tax = kind === "sales"
+      ? num(row.totalTax) || igst + cgst + sgst + cess || num(row.tax)
+      : igst + cgst + sgst + cess || num(row.tax) || num(row.itc);
+    return {
+      documents: sum.documents + 1,
+      taxable: sum.taxable + num(row.taxable || (kind === "purchases" ? row.amount : 0)),
+      tax: sum.tax + tax,
+      total: sum.total + num(row.total || row.amount || (num(row.taxable) + tax))
+    };
+  }, { documents: 0, taxable: 0, tax: 0, total: 0 });
+}
+
 function initializeGstOverviewFilters() {
   const today = todayIso();
   const monthInput = $("#gstOverviewMonth");
@@ -64,6 +82,12 @@ function buildGstOverview() {
   const range = gstOverviewRange();
   const salesInvoices = gstInvoiceRows().filter(row => gstOverviewDateMatches(row.date, range));
   const purchases = data.purchases().filter(row => gstOverviewDateMatches(row.date, range));
+  const tallySalesRows = tallyRegisterImports?.sales?.rows
+    ? tallyRegisterImports.sales.rows.filter(row => gstOverviewDateMatches(row.date, range))
+    : salesInvoices;
+  const tallyPurchaseRows = tallyRegisterImports?.purchases?.rows
+    ? tallyRegisterImports.purchases.rows.filter(row => gstOverviewDateMatches(row.date, range))
+    : purchases;
   const gst2bInvoices = (gst2bStatement?.invoices || []).filter(row => gstOverviewDateMatches(row.invoiceDate, range));
   const sales = salesInvoices.reduce((total, row) => ({
     taxable: total.taxable + num(row.taxable), tax: total.tax + num(row.totalTax), total: total.total + num(row.total)
@@ -90,12 +114,15 @@ function buildGstOverview() {
     itcFlagsKnown: total.itcFlagsKnown + (row.itcAvailable === "Y" || row.itcAvailable === "N" ? 1 : 0),
     total: total.total + num(row.total)
   }), { taxable: 0, igst: 0, cgst: 0, sgst: 0, cess: 0, tax: 0, eligibleItc: 0, itcFlagsKnown: 0, total: 0 });
+  const tallySales = gstOverviewTallyTotals(tallySalesRows, "sales");
+  const tallyPurchases = gstOverviewTallyTotals(tallyPurchaseRows, "purchases");
   const stock = (typeof itemStockSummary === "function" ? itemStockSummary() : []).reduce((total, row) => ({
     items: total.items + (num(row.stockBalance) > 0 ? 1 : 0),
     quantity: total.quantity + num(row.stockBalance),
     value: total.value + num(row.stockBalance) * num(row.rate)
   }), { items: 0, quantity: 0, value: 0 });
   const reconciliation = reconcileGst2b().filter(row => gstOverviewDateMatches(row.invoiceDate, range));
+  const selectedGstr1 = typeof gstr1ReturnsInRange === "function" ? gstr1ReturnsInRange(range) : [];
   const buckets = new Map();
   reconciliation.forEach(row => {
     const status = text(row.status) || "Unknown";
@@ -113,10 +140,15 @@ function buildGstOverview() {
     gst2bInvoices,
     sales,
     bookPurchases,
+    tallySales,
+    tallyPurchases,
+    tallySalesSource: tallyRegisterImports?.sales?.sourceFile || "Cashbook sales records",
+    tallyPurchaseSource: tallyRegisterImports?.purchases?.sourceFile || "Cashbook purchase records",
     statement,
     stock,
     itcFlagsComplete: gst2bInvoices.length > 0 && statement.itcFlagsKnown === gst2bInvoices.length,
     reconciliation,
+    selectedGstr1,
     buckets: [...buckets.values()].sort((left, right) => right.invoices - left.invoices)
   };
 }
@@ -157,6 +189,45 @@ function renderGstOverview() {
     { source: "Sales invoices (cashbook)", documents: overview.salesInvoices.length, taxable: overview.sales.taxable, tax: overview.sales.tax, total: overview.sales.total },
     { source: "Purchases (cashbook)", documents: overview.purchases.length, taxable: overview.bookPurchases.taxable, tax: overview.bookPurchases.itc, total: overview.bookPurchases.total },
     { source: "Supplier invoices (GSTR-2B)", documents: overview.gst2bInvoices.length, taxable: overview.statement.taxable, tax: overview.statement.tax, total: overview.statement.total }
+  ]);
+  const tallyPeriodNode = $("#gstOverviewTallyPeriod");
+  if (tallyPeriodNode) tallyPeriodNode.textContent = `Period: ${overview.rangeLabel} · Sales source: ${overview.tallySalesSource} · Purchase source: ${overview.tallyPurchaseSource}`;
+  table($("#gstOverviewTallyTable"), [
+    { label: "Reconciliation", key: "comparison" },
+    { label: "Tally source", key: "source" },
+    { label: "Tally records", key: "documents", num: true },
+    { label: "Tally taxable", key: "tallyTaxable", render: row => money2(row.tallyTaxable) },
+    { label: "GST records", key: "gstDocuments", num: true },
+    { label: "GST taxable", key: "gstTaxable", render: row => row.gstTaxable == null ? "No data" : money2(row.gstTaxable) },
+    { label: "Tax difference", key: "taxDifference", render: row => row.taxDifference == null ? "No data" : money2(row.taxDifference) },
+    { label: "Tally GST", key: "tallyTax", render: row => money2(row.tallyTax) },
+    { label: "GST tax", key: "gstTax", render: row => row.gstTax == null ? "No data" : money2(row.gstTax) },
+    { label: "GST tax difference", key: "gstTaxDifference", render: row => row.gstTaxDifference == null ? "No data" : money2(row.gstTaxDifference) }
+  ], [
+    {
+      comparison: "Sales vs GSTR-1",
+      source: overview.tallySalesSource,
+      documents: overview.tallySales.documents,
+      tallyTaxable: overview.tallySales.taxable,
+      gstDocuments: overview.selectedGstr1.reduce((count, row) => count + (row.invoices || []).length + (row.summaries || []).length, 0),
+      gstTaxable: overview.selectedGstr1.length ? overview.selectedGstr1.reduce((sum, row) => sum + num(row.totals?.taxable), 0) : null,
+      taxDifference: overview.selectedGstr1.length ? overview.selectedGstr1.reduce((sum, row) => sum + num(row.totals?.taxable), 0) - overview.tallySales.taxable : null,
+      tallyTax: overview.tallySales.tax,
+      gstTax: overview.selectedGstr1.length ? overview.selectedGstr1.reduce((sum, row) => sum + num(row.totals?.igst) + num(row.totals?.cgst) + num(row.totals?.sgst) + num(row.totals?.cess), 0) : null,
+      gstTaxDifference: overview.selectedGstr1.length ? overview.selectedGstr1.reduce((sum, row) => sum + num(row.totals?.igst) + num(row.totals?.cgst) + num(row.totals?.sgst) + num(row.totals?.cess), 0) - overview.tallySales.tax : null
+    },
+    {
+      comparison: "Purchases vs GSTR-2B",
+      source: overview.tallyPurchaseSource,
+      documents: overview.tallyPurchases.documents,
+      tallyTaxable: overview.tallyPurchases.taxable,
+      gstDocuments: overview.gst2bInvoices.length,
+      gstTaxable: overview.gst2bInvoices.length ? overview.statement.taxable : null,
+      taxDifference: overview.gst2bInvoices.length ? overview.statement.taxable - overview.tallyPurchases.taxable : null,
+      tallyTax: overview.tallyPurchases.tax,
+      gstTax: overview.gst2bInvoices.length ? overview.statement.tax : null,
+      gstTaxDifference: overview.gst2bInvoices.length ? overview.statement.tax - overview.tallyPurchases.tax : null
+    }
   ]);
   table($("#gstOverviewItcStockTable"), [
     { label: "Measure", key: "measure" },

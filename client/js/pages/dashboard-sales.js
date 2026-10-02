@@ -380,9 +380,11 @@ function cleanDenominations(values) {
 }
 
 function getSettingValue(key) {
-  const seedValue = seedRows("settings").find(setting => setting.key === key)?.value;
-  if (seedValue !== undefined) return seedValue;
-  return (user.settings || []).find(setting => setting.key === key)?.value;
+  const localSetting = (user.settings || []).find(setting => setting.key === key);
+  const seededSetting = seedRows("settings").find(setting => setting.key === key);
+  if (!apiAvailable && localSetting) return localSetting.value;
+  if (seededSetting) return seededSetting.value;
+  return localSetting?.value;
 }
 
 async function saveSettingValue(key, value) {

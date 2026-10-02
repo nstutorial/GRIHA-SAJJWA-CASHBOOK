@@ -100,6 +100,99 @@ async function parseTallyRegisterFile(file, kind) {
   return rows;
 }
 
+async function readTallyJsonFile(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const utf16Le = bytes[0] === 0xff && bytes[1] === 0xfe
+    || bytes[1] === 0 && bytes[3] === 0;
+  const payloadText = utf16Le
+    ? new TextDecoder("utf-16le").decode(bytes[0] === 0xff && bytes[1] === 0xfe ? bytes.slice(2) : bytes)
+    : new TextDecoder("utf-8").decode(bytes);
+  return JSON.parse(payloadText.replace(/^\uFEFF/, ""));
+}
+
+function parseTallyVoucherExport(payload) {
+  const vouchers = Array.isArray(payload) ? payload : payload?.tallymessage;
+  if (!Array.isArray(vouchers)) throw new Error("This JSON is not a Tally voucher export (expected a tallymessage list).");
+  const sales = [];
+  const purchases = [];
+  let skipped = 0;
+  const list = value => Array.isArray(value) ? value : value ? [value] : [];
+  const abs = value => Math.abs(tallyNumber(value));
+  for (const voucher of vouchers) {
+    const type = text(voucher.vouchertypename || voucher.metadata?.vchtype).toLowerCase();
+    const kind = type === "sales" || type === "credit note" ? "sales"
+      : type === "purchase" || type === "debit note" ? "purchases" : "";
+    if (!kind || voucher.isdeleted === true || voucher.iscancelled === true || voucher.isoptional === true) {
+      skipped += 1;
+      continue;
+    }
+    const sign = type === "credit note" || type === "debit note" ? -1 : 1;
+    const dateRaw = text(voucher.date);
+    const date = /^\d{8}$/.test(dateRaw)
+      ? `${dateRaw.slice(0, 4)}-${dateRaw.slice(4, 6)}-${dateRaw.slice(6, 8)}`
+      : tallyDate(dateRaw);
+    const inventory = list(voucher.allinventoryentries);
+    const ledgers = list(voucher.ledgerentries || voucher.allledgerentries);
+    let taxable = inventory.reduce((sum, row) => sum + abs(row.amount), 0);
+    let igst = 0, cgst = 0, sgst = 0, cess = 0;
+    for (const row of ledgers) {
+      const name = text(row.ledgername).toLowerCase();
+      const amount = abs(row.amount);
+      if (/\bigst\b|integrated tax/.test(name)) igst += amount;
+      else if (/\bcgst\b|central tax/.test(name)) cgst += amount;
+      else if (/\bsgst\b|\butgst\b|state tax|state\/ut/.test(name)) sgst += amount;
+      else if (/\bcess\b/.test(name)) cess += amount;
+    }
+    const total = abs(ledgers.find(row => row.ispartyledger === true)?.amount)
+      || taxable + igst + cgst + sgst + cess;
+    if (!taxable && total) taxable = Math.max(0, total - igst - cgst - sgst - cess);
+    const target = kind === "sales" ? sales : purchases;
+    target.push({
+      date,
+      invoiceNo: text(voucher.vouchernumber),
+      party: text(voucher.partyname || voucher.partyledgername),
+      gstin: text(voucher.partygstin || voucher.consigneegstin).toUpperCase(),
+      taxable: sign * taxable,
+      igst: sign * igst,
+      cgst: sign * cgst,
+      sgst: sign * sgst,
+      cess: sign * cess,
+      tax: sign * (igst + cgst + sgst + cess),
+      total: sign * total
+    });
+  }
+  if (!sales.length && !purchases.length) throw new Error("No usable Sales, Purchase, Credit Note, or Debit Note vouchers were found.");
+  return { sales, purchases, skipped, voucherCount: vouchers.length };
+}
+
+async function importCombinedTallyVoucherFile() {
+  const input = $("#tallyVoucherFile");
+  const status = $("#tallyVoucherStatus");
+  const file = input?.files?.[0];
+  if (!file) throw new Error("Choose the Tally Transactions.json file first.");
+  if (!apiAvailable) throw new Error("Database connection is required to save Tally register imports.");
+  const parsed = parseTallyVoucherExport(await readTallyJsonFile(file));
+  const replacing = [parsed.sales.length && tallyRegisterImports.sales, parsed.purchases.length && tallyRegisterImports.purchases]
+    .some(Boolean);
+  if (replacing && !confirm(`This file contains ${parsed.sales.length} sales-side vouchers and ${parsed.purchases.length} purchase-side vouchers. Existing saved Tally registers for these types will be replaced. Continue?`)) return;
+  if (status) status.textContent = `Saving ${parsed.sales.length} sales-side and ${parsed.purchases.length} purchase-side vouchers...`;
+  const saved = [];
+  for (const [kind, rows] of [["sales", parsed.sales], ["purchases", parsed.purchases]]) {
+    if (!rows.length) continue;
+    const result = await apiRequest("/api/gst-returns/tally-imports/import", {
+      method: "POST",
+      body: JSON.stringify({ kind, fileName: file.name, rows })
+    });
+    tallyRegisterImports[kind] = result.row;
+    const registerStatus = $(`#tally${kind === "sales" ? "Sales" : "Purchases"}Status`);
+    if (registerStatus) registerStatus.textContent = `${rows.length} saved ${kind} rows from ${file.name}.`;
+    saved.push(`${rows.length} ${kind}`);
+  }
+  if (status) status.textContent = `Imported ${saved.join(" and ")} vouchers from ${file.name}; ${parsed.skipped} unsupported, deleted, cancelled, or optional vouchers skipped.`;
+  renderTallyGstCompare();
+  toast(`Imported ${parsed.sales.length} sales-side and ${parsed.purchases.length} purchase-side Tally vouchers.`);
+}
+
 async function importTallyRegister(kind) {
   const input = $(`#tally${kind === "sales" ? "Sales" : "Purchases"}File`);
   const status = $(`#tally${kind === "sales" ? "Sales" : "Purchases"}Status`);
@@ -195,6 +288,76 @@ function matchImportedTallyPurchases(purchases, gst2bInvoices) {
     });
   });
   return matches;
+}
+
+function visibleTallyPurchaseMatches(matches) {
+  const search = text($("#tallyGstMatchSearch")?.value).trim().toLowerCase();
+  const filter = $("#tallyGstMatchFilter")?.value || "all";
+  const direction = $("#tallyGstMatchDateSort")?.value === "oldest" ? 1 : -1;
+  return matches.filter(row => {
+    const matchesSearch = !search || `${row.invoiceNo} ${row.supplier} ${row.gstin} ${row.status}`.toLowerCase().includes(search);
+    const isMissing = text(row.status).startsWith("Missing");
+    const matchesFilter = filter === "missing" ? isMissing
+      : filter === "matched" ? row.status === "Matched"
+      : filter === "issues" ? row.status !== "Matched" && !isMissing
+      : true;
+    return matchesSearch && matchesFilter;
+  }).sort((a, b) => {
+    const dateA = text(a.invoiceDate);
+    const dateB = text(b.invoiceDate);
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    return dateA.localeCompare(dateB) * direction;
+  });
+}
+
+function visibleTallySalesMatches(matches) {
+  const search = text($("#tallyGstr1MatchSearch")?.value).trim().toLowerCase();
+  const filter = $("#tallyGstr1MatchFilter")?.value || "all";
+  const direction = $("#tallyGstr1MatchDateSort")?.value === "oldest" ? 1 : -1;
+  return matches.filter(row => {
+    const matchesSearch = !search || `${row.invoiceNo} ${row.customer} ${row.gstin} ${row.status} ${row.documentType}`.toLowerCase().includes(search);
+    const isMissing = text(row.status).startsWith("Missing");
+    const matchesFilter = filter === "missing" ? isMissing
+      : filter === "matched" ? row.status === "Matched"
+      : filter === "issues" ? row.status !== "Matched" && !isMissing
+      : true;
+    return matchesSearch && matchesFilter;
+  }).sort((a, b) => {
+    const dateA = text(a.invoiceDate);
+    const dateB = text(b.invoiceDate);
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    return dateA.localeCompare(dateB) * direction;
+  });
+}
+
+function printTallyPurchaseMatches() {
+  const rows = visibleTallyPurchaseMatches(buildTallyGstCompare().matches);
+  const popup = window.open("", "_blank");
+  if (!popup) {
+    toast("Allow pop-ups to print the purchase matching table.");
+    return;
+  }
+  const printableRows = rows.map(row => `<tr><td>${html(row.invoiceNo)}</td><td>${html(row.supplier)}</td><td>${html(row.gstin)}</td><td>${html(row.invoiceDate)}</td><td class="num">${html(money2(row.bookTotal))}</td><td class="num">${html(money2(row.statementTotal))}</td><td class="num">${html(money2(row.variance))}</td><td>${html(row.status)}</td></tr>`).join("");
+  const period = text($("#tallyGstRangeLabel")?.textContent);
+  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Purchase Invoice Matching: Tally vs GSTR-2B</title><style>body{font:12px Arial,sans-serif;color:#17251f;padding:20px}h1{font-size:20px;margin:0 0 6px}p{color:#52645b;margin:0 0 16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #87958d;padding:7px;text-align:left}th{background:#e6eee9}.num{text-align:right;white-space:nowrap}@page{size:landscape;margin:12mm}</style></head><body><h1>Purchase Invoice Matching: Tally vs GSTR-2B</h1><p>${html(period)} · ${rows.length} invoices</p><table><thead><tr><th>Tally bill / GST invoice</th><th>Supplier</th><th>GSTIN</th><th>Invoice date</th><th>Tally total</th><th>GSTR-2B total</th><th>Difference</th><th>Result</th></tr></thead><tbody>${printableRows || "<tr><td colspan=\"8\">No invoices match the current search and filters.</td></tr>"}</tbody></table><script>window.onload=()=>window.print()</script></body></html>`);
+  popup.document.close();
+}
+
+function printTallySalesMatches() {
+  const rows = visibleTallySalesMatches(buildTallyGstCompare().gstr1Matches);
+  const popup = window.open("", "_blank");
+  if (!popup) {
+    toast("Allow pop-ups to print the sales matching table.");
+    return;
+  }
+  const printableRows = rows.map(row => `<tr><td>${html(row.documentType)}</td><td>${html(row.invoiceNo)}</td><td>${html(row.customer)}</td><td>${html(row.gstin)}</td><td>${html(row.invoiceDate)}</td><td class="num">${html(money2(row.bookTotal))}</td><td class="num">${html(money2(row.returnTotal))}</td><td class="num">${html(money2(row.variance))}</td><td>${html(row.status)}</td></tr>`).join("");
+  const period = text($("#tallyGstRangeLabel")?.textContent);
+  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Sales Invoice Matching: Books vs GSTR-1</title><style>body{font:12px Arial,sans-serif;color:#17251f;padding:20px}h1{font-size:20px;margin:0 0 6px}p{color:#52645b;margin:0 0 16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #87958d;padding:7px;text-align:left}th{background:#e6eee9}.num{text-align:right;white-space:nowrap}@page{size:landscape;margin:12mm}</style></head><body><h1>Sales Invoice Matching: Books vs GSTR-1</h1><p>${html(period)} · ${rows.length} sales documents</p><table><thead><tr><th>Document type</th><th>Invoice / note</th><th>Customer</th><th>GSTIN</th><th>Date</th><th>Book total</th><th>GSTR-1 total</th><th>Difference</th><th>Result</th></tr></thead><tbody>${printableRows || "<tr><td colspan=\"9\">No sales documents match the current search and filters.</td></tr>"}</tbody></table><script>window.onload=()=>window.print()</script></body></html>`);
+  popup.document.close();
 }
 
 function matchImportedGstr1Sales(sales, gstr1Invoices) {
@@ -428,18 +591,29 @@ function renderTallyGstCompare() {
     }
   ]);
 
+  const tallySourceSummary = $("#tallyGstSourceSummary");
+  if (tallySourceSummary) {
+    const sourceText = (kind, record, fallback, count) => {
+      const name = record ? record.sourceFile || fallback : fallback;
+      const rowCount = record ? `${record.rowCount} imported rows` : `${count} records currently available`;
+      return `${kind}: ${name} (${rowCount})`;
+    };
+    tallySourceSummary.textContent = `${sourceText("Sales", tallyRegisterImports.sales, "Cashbook sales records", report.tallySales.documents)} · ${sourceText("Purchases", tallyRegisterImports.purchases, "Cashbook purchase records", report.tallyPurchases.documents)}`;
+  }
+
   const gstr1Tax = report.gstr1Totals.igst + report.gstr1Totals.cgst + report.gstr1Totals.sgst + report.gstr1Totals.cess;
   const gstr1RowCount = report.gstr1Returns.reduce((count, row) => count + (row.invoices || []).length + (row.summaries || []).length, 0);
   table($("#tallyGstr1CompareTable"), [
     { label: "Measure", key: "measure" },
+    { label: `Tally data (${tallyRegisterImports.sales ? "Imported" : "Cashbook"})`, key: "tally", render: row => row.tally == null ? "Not available" : money2(row.tally) },
     { label: "Books", key: "books", render: row => row.books == null ? "Not available" : money2(row.books) },
     { label: "GSTR-1", key: "gstr1", render: row => row.gstr1 == null ? "No return" : money2(row.gstr1) },
-    { label: "GSTR-1 - Books", key: "difference" }
+    { label: "GSTR-1 - Tally", key: "difference" }
   ], [
-    { measure: "Taxable sales", books: report.tallySales.taxable, gstr1: report.gstr1Returns.length ? report.gstr1Totals.taxable : null, difference: tallyGstDifference(report.gstr1Returns.length ? report.gstr1Totals.taxable : null, report.tallySales.taxable) },
-    { measure: "Output tax", books: report.tallySales.tax, gstr1: report.gstr1Returns.length ? gstr1Tax : null, difference: tallyGstDifference(report.gstr1Returns.length ? gstr1Tax : null, report.tallySales.tax) },
-    { measure: "Sales total", books: report.tallySales.total, gstr1: report.gstr1Returns.length ? report.gstr1Totals.total : null, difference: tallyGstDifference(report.gstr1Returns.length ? report.gstr1Totals.total : null, report.tallySales.total) },
-    { measure: "GSTR-1 return rows (invoice + aggregate)", books: null, gstr1: report.gstr1Returns.length ? gstr1RowCount : null, difference: "Not comparable" }
+    { measure: "Taxable sales", tally: report.tallySales.taxable, books: report.tallySales.taxable, gstr1: report.gstr1Returns.length ? report.gstr1Totals.taxable : null, difference: tallyGstDifference(report.gstr1Returns.length ? report.gstr1Totals.taxable : null, report.tallySales.taxable) },
+    { measure: "Output tax", tally: report.tallySales.tax, books: report.tallySales.tax, gstr1: report.gstr1Returns.length ? gstr1Tax : null, difference: tallyGstDifference(report.gstr1Returns.length ? gstr1Tax : null, report.tallySales.tax) },
+    { measure: "Sales total", tally: report.tallySales.total, books: report.tallySales.total, gstr1: report.gstr1Returns.length ? report.gstr1Totals.total : null, difference: tallyGstDifference(report.gstr1Returns.length ? report.gstr1Totals.total : null, report.tallySales.total) },
+    { measure: "GSTR-1 return rows (invoice + aggregate)", tally: null, books: null, gstr1: report.gstr1Returns.length ? gstr1RowCount : null, difference: "Not comparable" }
   ]);
 
   table($("#tallyGstTaxCompare"), [
@@ -455,11 +629,9 @@ function renderTallyGstCompare() {
     { measure: "GSTR-3B net ITC", tally: report.tallyPurchases.tax, gst: filedNetItc, difference: tallyGstDifference(filedNetItc, report.tallyPurchases.tax) }
   ]);
 
-  const search = text($("#tallyGstMatchSearch")?.value).toLowerCase();
-  const visibleMatches = report.matches.filter(row => !search
-    || `${row.invoiceNo} ${row.supplier} ${row.gstin} ${row.status}`.toLowerCase().includes(search));
+  const visibleMatches = visibleTallyPurchaseMatches(report.matches);
   const matchCount = $("#tallyGstMatchCount");
-  if (matchCount) matchCount.textContent = `${visibleMatches.length} of ${report.matches.length} purchase invoices`;
+  if (matchCount) matchCount.textContent = `${visibleMatches.length} of ${report.matches.length} purchase invoices · Period: ${rangeLabel}`;
   const matchNode = $("#tallyGstMatchTable");
   if (!report.gst2bInvoices.length) {
     matchNode.innerHTML = "<tbody><tr><td>No GSTR-2B invoices for this period. Import the portal statement in GST Returns.</td></tr></tbody>";
@@ -476,11 +648,9 @@ function renderTallyGstCompare() {
     ], visibleMatches);
   }
 
-  const gstr1Search = text($("#tallyGstr1MatchSearch")?.value).toLowerCase();
-  const visibleGstr1Matches = report.gstr1Matches.filter(row => !gstr1Search
-    || `${row.invoiceNo} ${row.customer} ${row.gstin} ${row.status} ${row.documentType}`.toLowerCase().includes(gstr1Search));
+  const visibleGstr1Matches = visibleTallySalesMatches(report.gstr1Matches);
   const gstr1MatchCount = $("#tallyGstr1MatchCount");
-  if (gstr1MatchCount) gstr1MatchCount.textContent = `${visibleGstr1Matches.length} of ${report.gstr1Matches.length} sales documents`;
+  if (gstr1MatchCount) gstr1MatchCount.textContent = `${visibleGstr1Matches.length} of ${report.gstr1Matches.length} sales documents · Period: ${rangeLabel}`;
   const gstr1MatchNode = $("#tallyGstr1MatchTable");
   if (!report.gstr1Returns.length) {
     gstr1MatchNode.innerHTML = "<tbody><tr><td>No GSTR-1 return for this period. Import a portal JSON in GST Returns.</td></tr></tbody>";
@@ -526,9 +696,28 @@ function bindTallyGstCompare() {
   }
   ["tallyGstPeriod", "tallyGstMonth", "tallyGstFinancialYear"].forEach(id => $(`#${id}`)?.addEventListener("change", renderTallyGstCompare));
   $("#tallyGstMatchSearch")?.addEventListener("input", renderTallyGstCompare);
+  $("#tallyGstMatchFilter")?.addEventListener("change", renderTallyGstCompare);
+  $("#tallyGstMatchDateSort")?.addEventListener("change", renderTallyGstCompare);
+  $("#tallyGstMatchPrint")?.addEventListener("click", printTallyPurchaseMatches);
   $("#tallyGstr1MatchSearch")?.addEventListener("input", renderTallyGstCompare);
+  $("#tallyGstr1MatchFilter")?.addEventListener("change", renderTallyGstCompare);
+  $("#tallyGstr1MatchDateSort")?.addEventListener("change", renderTallyGstCompare);
+  $("#tallyGstr1MatchPrint")?.addEventListener("click", printTallySalesMatches);
   $("#tallyGstCompareExport")?.addEventListener("click", exportTallyGstCompare);
   $("#tallyGstOpenReturns")?.addEventListener("click", () => showView("gstReturns"));
+  $("#importTallyVoucherBtn")?.addEventListener("click", withBusyClick(async () => {
+    const status = $("#tallyVoucherStatus");
+    const input = $("#tallyVoucherFile");
+    try {
+      await importCombinedTallyVoucherFile();
+    } catch (error) {
+      console.error(error);
+      if (status) status.textContent = error.message || "Could not import the Tally voucher export.";
+      toast(error.message || "Could not import the Tally voucher export.");
+    } finally {
+      if (input) input.value = "";
+    }
+  }, "Importing..."));
   [["sales", "tallySales"], ["purchases", "tallyPurchases"]].forEach(([kind, prefix]) => {
     $(`#import${prefix}Btn`)?.addEventListener("click", withBusyClick(async () => {
       const status = $(`#${prefix}Status`);

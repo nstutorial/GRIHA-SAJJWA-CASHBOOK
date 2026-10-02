@@ -6,10 +6,13 @@ let cashbookStatementRows = [];
 function cashbookBankAccounts() {
   const saved = getSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY);
   if (Array.isArray(saved) && saved.length) {
-    return saved.map((account, index) => ({ ...account, id: text(account.id) || `bank-${index + 1}`, name: text(account.name) || text(account.bankName) || `Bank account ${index + 1}` }));
+    const accounts = saved.map((account, index) => ({ ...account, id: text(account.id) || `bank-${index + 1}`, name: text(account.name) || text(account.bankName) || `Bank account ${index + 1}` }));
+    const defaultId = text(getSettingValue("cashbookDefaultBankAccountId"));
+    return [accounts.find(account => account.id === defaultId) || accounts[0]];
   }
   const paymentAccount = getSettingValue("accountDetails") || {};
-  return [{ id: "main-bank", name: text(paymentAccount.name) || text(paymentAccount.bankName) || "Main Bank", ...paymentAccount }];
+  const id = text(getSettingValue("cashbookDefaultBankAccountId")) || "main-bank";
+  return [{ ...paymentAccount, id, name: text(paymentAccount.name) || text(paymentAccount.bankName) || "Main Bank" }];
 }
 
 function cashbookDefaultBankAccountId() {
@@ -19,18 +22,27 @@ function cashbookDefaultBankAccountId() {
 }
 
 function cashbookAccountById(id) {
-  return cashbookBankAccounts().find(account => account.id === text(id)) || null;
+  const key = text(id);
+  const active = cashbookBankAccounts().find(account => account.id === key);
+  if (active) return active;
+  const saved = getSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY);
+  if (Array.isArray(saved)) return saved.find(account => text(account.id) === key) || null;
+  return null;
 }
 
-function renderCashbookBankAccountSelects() {
+function renderCashbookBankAccountSelects(preferredAccountId = "") {
   const accounts = cashbookBankAccounts();
   document.querySelectorAll('select[name="bankAccountId"]').forEach(select => {
-    const selected = select.dataset.preserveSelection === "true" ? select.value : "";
+    const currentSelection = select.value;
+    const selected = select.dataset.preserveSelection === "true" ? currentSelection : "";
     const isEdit = select.closest("#transactionEditForm");
     const options = accounts.map(account => `<option value="${html(account.id)}">${html(account.name)}</option>`).join("");
-    select.innerHTML = `${isEdit ? `<option value="">Unassigned / legacy online</option>` : ""}${options}`;
-    if (selected && accounts.some(account => account.id === selected)) select.value = selected;
+    const isReceiptAccount = select.closest("#receiptForm") || select.closest("#paymentForm");
+    select.innerHTML = `${isEdit ? `<option value="">Unassigned / legacy online</option>` : isReceiptAccount ? `<option value="">Select receiving account</option>` : ""}${options}`;
+    if (preferredAccountId && accounts.some(account => account.id === preferredAccountId) && isReceiptAccount) select.value = preferredAccountId;
+    else if (selected && accounts.some(account => account.id === selected)) select.value = selected;
     else if (isEdit) select.value = "";
+    else if (isReceiptAccount) select.value = cashbookDefaultBankAccountId();
     else if (accounts.length) select.value = cashbookDefaultBankAccountId();
     select.dataset.preserveSelection = "true";
   });

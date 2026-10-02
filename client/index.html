@@ -265,6 +265,9 @@
         <section class="gst-overview-section">
           <h3>Books and GSTN Comparison</h3>
           <div class="table-wrap"><table id="gstOverviewSourceTable"></table></div>
+          <h3>Tally Data Reconciliation</h3>
+          <p id="gstOverviewTallyPeriod" class="gst-overview-range" aria-live="polite"></p>
+          <div class="table-wrap"><table id="gstOverviewTallyTable"></table></div>
           <h3>Stock Value and Available ITC</h3>
           <div class="table-wrap"><table id="gstOverviewItcStockTable"></table></div>
           <p class="gst-overview-caveat">GSTR-2B available ITC uses imported invoice rows marked ITC available; re-import older statements to include eligibility flags. Current stock value is stock balance multiplied by the item-master rate and is not period-filtered. GSTR-2B does not report stock value. Verify ITC eligibility before filing.</p>
@@ -298,6 +301,11 @@
           <p id="tallyGstRangeLabel" class="gst-overview-range" aria-live="polite"></p>
         </div>
         <div class="filters gst-returns-filters">
+          <label>Combined Tally voucher export (JSON)<input id="tallyVoucherFile" type="file" accept=".json,application/json"></label>
+          <button id="importTallyVoucherBtn" type="button">Import sales and purchases</button>
+          <span id="tallyVoucherStatus" class="panel-subtitle" role="status" aria-live="polite">Import a Tally Transactions.json export. Sales, purchases, credit notes, and debit notes will be split into the saved Tally comparison registers.</span>
+        </div>
+        <div class="filters gst-returns-filters">
           <label>Tally Sales Register<input id="tallySalesFile" type="file" accept=".csv,.xlsx,.xls,.json,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
           <button id="importTallySalesBtn" type="button">Import sales</button>
           <span id="tallySalesStatus" class="panel-subtitle" role="status" aria-live="polite">Import a Tally sales register to compare outward taxable value and tax with filed GSTR-3B.</span>
@@ -311,10 +319,12 @@
         <div id="tallyGstKpis" class="sales-kpi-grid"></div>
         <section class="gst-overview-section">
           <h3>Sales and Purchase Totals</h3>
+          <p id="tallyGstSourceSummary" class="gst-overview-range" aria-live="polite"></p>
           <div class="table-wrap"><table id="tallyGstCompareSummary"></table></div>
         </section>
         <section class="gst-overview-section">
           <h3>Sales Totals: Books vs GSTR-1</h3>
+          <p id="tallyGstr1ComparePeriod" class="gst-overview-range" aria-live="polite"></p>
           <div class="table-wrap"><table id="tallyGstr1CompareTable"></table></div>
         </section>
         <section class="gst-overview-section">
@@ -324,7 +334,12 @@
         <section class="gst-overview-section">
           <div class="panel-head">
             <h3>Sales Invoice Matching: Books vs GSTR-1</h3>
-            <label>Find invoice or customer<input id="tallyGstr1MatchSearch" type="search" placeholder="Invoice, customer, GSTIN, or result" autocomplete="off"></label>
+            <div class="gst-overview-actions">
+              <label>Find invoice or customer<input id="tallyGstr1MatchSearch" type="search" placeholder="Invoice, customer, GSTIN, or result" autocomplete="off"></label>
+              <label>Show<select id="tallyGstr1MatchFilter"><option value="all">All invoices</option><option value="missing">Missing only</option><option value="matched">Matched only</option><option value="issues">Other issues</option></select></label>
+              <label>Date order<select id="tallyGstr1MatchDateSort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+              <button id="tallyGstr1MatchPrint" class="secondary" type="button">Print table</button>
+            </div>
           </div>
           <p id="tallyGstr1MatchCount" class="gst-overview-range" aria-live="polite"></p>
           <div class="table-wrap tall"><table id="tallyGstr1MatchTable"></table></div>
@@ -332,7 +347,12 @@
         <section class="gst-overview-section">
           <div class="panel-head">
             <h3>Purchase Invoice Matching: Tally vs GSTR-2B</h3>
-            <label>Find invoice or supplier<input id="tallyGstMatchSearch" type="search" placeholder="Invoice, supplier, GSTIN, or result" autocomplete="off"></label>
+            <div class="gst-overview-actions">
+              <label>Find invoice or supplier<input id="tallyGstMatchSearch" type="search" placeholder="Invoice, supplier, GSTIN, or result" autocomplete="off"></label>
+              <label>Show<select id="tallyGstMatchFilter"><option value="all">All invoices</option><option value="missing">Missing only</option><option value="matched">Matched only</option><option value="issues">Other issues</option></select></label>
+              <label>Date order<select id="tallyGstMatchDateSort"><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select></label>
+              <button id="tallyGstMatchPrint" class="secondary" type="button">Print table</button>
+            </div>
           </div>
           <p id="tallyGstMatchCount" class="gst-overview-range" aria-live="polite"></p>
           <div class="table-wrap tall"><table id="tallyGstMatchTable"></table></div>
@@ -366,6 +386,8 @@
         <details class="gst-import-disclosure">
           <summary><span>Import GSTR-2B statement</span><span class="gst-import-chevron" aria-hidden="true"></span></summary>
           <div class="filters gst-returns-filters gst-import-fields">
+            <label>Business GSTIN<input id="gst2bBusinessGstin" maxlength="15" placeholder="15-character GSTIN" autocomplete="off" readonly></label>
+            <span id="gst2bGstinAlert" class="panel-subtitle" role="alert" aria-live="assertive" hidden></span>
             <label>GSTR-2B statement<input id="gst2bFile" type="file" accept=".json,.xlsx,.xls,.csv,application/json,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
             <button id="importGst2bBtn" type="button">Import statement</button>
             <span id="gst2bImportStatus" class="panel-subtitle" role="status" aria-live="polite">Download GSTR-2B from the GST portal and upload it here. Records are stored in this cashbook database. Never enter your GST portal password in this app.</span>
@@ -374,6 +396,8 @@
         <details class="gst-import-disclosure">
           <summary><span>Import GSTR-1 return</span><span class="gst-import-chevron" aria-hidden="true"></span></summary>
           <div class="filters gst-returns-filters gst-import-fields">
+            <label>Business GSTIN<input id="gstr1BusinessGstin" maxlength="15" placeholder="15-character GSTIN" autocomplete="off" readonly></label>
+            <span id="gstr1GstinAlert" class="panel-subtitle" role="alert" aria-live="assertive" hidden></span>
             <label>GSTR-1 return JSON<input id="gstr1File" type="file" accept=".json,application/json"></label>
             <button id="importGstr1Btn" type="button">Import GSTR-1</button>
             <span id="gstr1ImportStatus" class="panel-subtitle" role="status" aria-live="polite">Upload a GST portal GSTR-1 JSON. Invoice sections and B2CS summaries are saved by GSTIN and return period for sales comparison.</span>
@@ -704,13 +728,11 @@
                 <p>Bank and payment information</p>
               </div>
             </div>
-            <div class="settings-grid settings-grid-compact">
-              <label class="span-2">Default invoice account<select id="settingsDefaultBankAccount" name="defaultBankAccountId"></select></label>
-            </div>
+            <p class="panel-subtitle">A single receiving account is used for invoice and payment entries.</p>
             <div id="settingsBankAccounts" class="settings-bank-accounts" aria-live="polite"></div>
-            <details class="settings-account-editor" id="settingsAccountEditor">
-              <summary>Add bank account</summary>
-              <form id="settingsBankAccountForm" class="settings-grid settings-grid-compact">
+            <details class="settings-account-editor" id="settingsAccountEditor" hidden>
+              <summary id="settingsBankAccountEditorTitle">Edit receiving account</summary>
+              <div id="settingsBankAccountForm" class="settings-grid settings-grid-compact">
                 <input type="hidden" name="id">
                 <label>Account name<input name="name" placeholder="e.g. HDFC Current Account" required maxlength="80"></label>
                 <label>Bank name<input name="bankName" placeholder="Bank name"></label>
@@ -718,8 +740,8 @@
                 <label>IFSC<input name="ifsc" placeholder="IFSC"></label>
                 <label>Branch<input name="branch" placeholder="Branch"></label>
                 <label class="span-2">UPI / Payment note<input name="upi" placeholder="UPI ID or payment note"></label>
-                <div class="actions span-2"><button type="submit">Save bank account</button><button type="reset" class="secondary">Clear</button></div>
-              </form>
+                <div class="actions span-2"><button id="saveSettingsBankAccountBtn" type="button">Save account details</button><button id="cancelSettingsBankAccountBtn" type="button" class="secondary">Cancel</button></div>
+              </div>
             </details>
           </section>
 
@@ -897,6 +919,10 @@
             <div class="settings-card-actions">
               <button id="deleteGst2bDataBtn" class="danger-btn" type="button">Delete imported GSTR-2B data</button>
               <span id="deleteGst2bDataStatus" role="status" aria-live="polite">This does not delete purchase entries, invoices, or other accounting records.</span>
+            </div>
+            <div class="settings-card-actions">
+              <button id="deleteGstr1DataBtn" class="danger-btn" type="button">Delete all imported GSTR-1 returns</button>
+              <span id="deleteGstr1DataStatus" role="status" aria-live="polite">This removes imported GSTR-1 return data only; cashbook sales remain.</span>
             </div>
           </section>
         </div>

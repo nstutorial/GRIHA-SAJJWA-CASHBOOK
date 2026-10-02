@@ -7,6 +7,75 @@ let gstr3bReturns = [];
 let gstr3bSavedReport = null;
 let gstr1Returns = [];
 
+function configuredBusinessGstin() {
+  return text(getSettingValue("businessProfile")?.gstin).toUpperCase().replace(/\s/g, "");
+}
+
+function gstinStatus(inputId, alertId, fileGstin, fileSelected) {
+  const input = $(inputId);
+  const alert = $(alertId);
+  const configured = configuredBusinessGstin();
+  const detected = text(fileGstin).toUpperCase().replace(/\s/g, "");
+  if (input) input.value = detected || "";
+  if (!alert) return false;
+  alert.hidden = !fileSelected;
+  alert.style.color = "#b42318";
+  if (!fileSelected) {
+    alert.textContent = "";
+    return false;
+  }
+  if (!/^[0-9A-Z]{15}$/.test(configured)) {
+    alert.textContent = "Set a valid business GSTIN in Settings before importing.";
+    return false;
+  }
+  if (!/^[0-9A-Z]{15}$/.test(detected)) {
+    alert.textContent = "Could not identify a valid GSTIN in the selected file.";
+    return false;
+  }
+  if (configured !== detected) {
+    alert.textContent = `GSTIN mismatch: file ${detected} does not match Settings ${configured}. Import is disabled.`;
+    return false;
+  }
+  alert.style.color = "#18794e";
+  alert.textContent = `GSTIN matches Settings: ${detected}.`;
+  return true;
+}
+
+function syncGstr1FileGstin() {
+  const file = $("#gstr1File")?.files?.[0];
+  if (!file) return gstinStatus("#gstr1BusinessGstin", "#gstr1GstinAlert", "", false);
+  file.text().then(content => {
+    let gstin = "";
+    try {
+      const payload = JSON.parse(content);
+      const root = payload?.data && !Array.isArray(payload.data) ? payload.data : payload;
+      gstin = text(gstr3bField(root, "gstin", "gstin of taxpayer", "gstin/uin"));
+    } catch { /* leave GSTIN blank; status disables import */ }
+    const matched = gstinStatus("#gstr1BusinessGstin", "#gstr1GstinAlert", gstin, true);
+    const button = $("#importGstr1Btn");
+    if (button) button.disabled = !matched;
+  }).catch(() => {
+    const matched = gstinStatus("#gstr1BusinessGstin", "#gstr1GstinAlert", "", true);
+    const button = $("#importGstr1Btn");
+    if (button) button.disabled = !matched;
+  });
+}
+
+function syncGst2bFileGstin() {
+  const file = $("#gst2bFile")?.files?.[0];
+  if (!file) {
+    const matched = gstinStatus("#gst2bBusinessGstin", "#gst2bGstinAlert", "", false);
+    const button = $("#importGst2bBtn");
+    if (button) button.disabled = !matched;
+    return;
+  }
+  const matches = file.name.toUpperCase().match(/[0-9A-Z]{15}/g) || [];
+  const gstin = matches.length === 1 ? matches[0] : "";
+  const matched = gstinStatus("#gst2bBusinessGstin", "#gst2bGstinAlert", gstin, true);
+  const button = $("#importGst2bBtn");
+  if (button) button.disabled = !matched;
+}
+
 function gstr1InvoiceKey(value) {
   return text(value).toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
@@ -273,6 +342,9 @@ async function importGstr1Return() {
     throw new Error("Upload the GST portal GSTR-1 JSON file. Spreadsheet and PDF exports are not supported yet.");
   }
   const parsed = normalizeGstr1Json(JSON.parse(await file.text()));
+  const expectedGstin = configuredBusinessGstin();
+  if (!/^[0-9A-Z]{15}$/.test(expectedGstin)) throw new Error("Enter the correct business GSTIN before importing.");
+  if (parsed.gstin !== expectedGstin) throw new Error(`GSTIN mismatch. File is for ${parsed.gstin}, but selected business GSTIN is ${expectedGstin}. Nothing was imported.`);
   const result = await apiRequest("/api/gst-returns/gstr1/import", {
     method: "POST",
     body: JSON.stringify({ ...parsed, fileName: file.name })
@@ -365,6 +437,28 @@ function syncGstReturnsPeriodControls() {
       ? `Selected range: ${dates.from || "start"} – ${dates.to || "end"}`
       : "Choose a start and end date";
   }
+}
+
+async function deleteGstr1Return(returnKey) {
+  const row = gstr1Returns.find(item => item.returnKey === returnKey);
+  if (!row || !confirm(`Delete imported GSTR-1 ${row.returnPeriod} for ${row.gstin}? Cashbook sales will remain. This cannot be undone.`)) return;
+  await apiRequest(`/api/gst-returns/gstr1/${encodeURIComponent(returnKey)}`, { method: "DELETE" });
+  await loadGstr1ReturnsFromDb();
+  renderGstReturns();
+  renderTallyGstCompare();
+  toast(`Deleted GSTR-1 ${row.returnPeriod} for ${row.gstin}.`);
+}
+
+async function deleteAllGstr1Returns() {
+  if (!apiAvailable) throw new Error("Database connection is required to delete stored GSTR-1 data.");
+  if (!confirm("Delete all imported GSTR-1 return data? Cashbook sales and other records will remain. This cannot be undone.")) return;
+  const result = await apiRequest("/api/gst-returns/gstr1", { method: "DELETE" });
+  await loadGstr1ReturnsFromDb();
+  renderGstReturns();
+  renderTallyGstCompare();
+  const status = $("#deleteGstr1DataStatus");
+  if (status) status.textContent = `${result.deletedCount} imported GSTR-1 returns deleted. Cashbook sales remain.`;
+  toast(`${result.deletedCount} imported GSTR-1 returns deleted.`);
 }
 
 function gstReturnsTableDates() {
@@ -727,6 +821,12 @@ function uniqueGst2bInvoices(invoices) {
     const status = $("#gst2bImportStatus");
     try {
       const extension = file.name.split(".").pop().toLowerCase();
+      const expectedGstin = configuredBusinessGstin();
+      if (!/^[0-9A-Z]{15}$/.test(expectedGstin)) throw new Error("Enter the correct business GSTIN before importing.");
+      const fileGstins = [...new Set((file.name.toUpperCase().match(/[0-9A-Z]{15}/g) || []))];
+      if (fileGstins.length && (fileGstins.length !== 1 || fileGstins[0] !== expectedGstin)) {
+        throw new Error(`GSTIN mismatch. The filename contains ${fileGstins.join(", ")}; selected business GSTIN is ${expectedGstin}. Nothing was imported.`);
+      }
       let invoices = [];
       if (extension === "json") {
         invoices = parseGst2bJson(JSON.parse(await file.text()));
@@ -738,6 +838,8 @@ function uniqueGst2bInvoices(invoices) {
       }
       invoices = uniqueGst2bInvoices(invoices);
       if (!invoices.length) throw new Error("No invoice rows found. Select a GSTR-2B JSON, Excel, or CSV statement.");
+      const fileSupplierGstins = [...new Set(invoices.map(row => text(row.gstin).toUpperCase()).filter(Boolean))];
+      if (fileSupplierGstins.length > 1) throw new Error(`This file contains multiple supplier GSTINs (${fileSupplierGstins.join(", ")}). Check that it belongs to the selected business before importing.`);
       const result = await apiRequest("/api/gst-returns/gstr2b/import", {
         method: "POST",
         body: JSON.stringify({ fileName: file.name, invoices })
@@ -1248,6 +1350,15 @@ function renderGstReturnsTable(report) {
       detailsTable.innerHTML = `<tbody><tr><td>${gstr1Returns.length ? "No imported GSTR-1 return covers the selected table date range." : "Import a GSTR-1 JSON above to view its rows and compare sales."}</td></tr></tbody>`;
       return;
     }
+    const importedReturnKeys = [...new Set(report.gstr1Imports.map(row => row.returnKey).filter(Boolean))];
+    const deleteButton = `<div class="gst-fy-actions">${importedReturnKeys.map(key => {
+      const row = gstr1Returns.find(item => item.returnKey === key);
+      return row ? `<button type="button" class="danger-btn gstr1-return-delete" data-gstr1-return-key="${html(key)}">Delete GSTR-1 ${html(row.returnPeriod)} · ${html(row.gstin)}</button>` : "";
+    }).join("")}</div>`;
+    detailsTable.insertAdjacentHTML("beforebegin", deleteButton);
+    $$(".gstr1-return-delete", detailsTable.parentElement).forEach(button => button.addEventListener("click", withBusyClick(
+      () => deleteGstr1Return(button.dataset.gstr1ReturnKey), "Deleting..."
+    )));
     table(detailsTable, [
       { label: "Type", key: "documentType" },
       { label: "Section", key: "section" },
@@ -1449,6 +1560,14 @@ function renderGstReturnsTable(report) {
 
 function renderGstReturns() {
   syncGstReturnsTableRangeControls();
+  $("#gstr1File")?.addEventListener("change", syncGstr1FileGstin);
+  $("#gst2bFile")?.addEventListener("change", syncGst2bFileGstin);
+  const gstr1Button = $("#importGstr1Btn");
+  const gst2bButton = $("#importGst2bBtn");
+  if (gstr1Button) gstr1Button.disabled = true;
+  if (gst2bButton) gst2bButton.disabled = true;
+  syncGstr1FileGstin();
+  syncGst2bFileGstin();
   syncGstReturnsPeriodControls();
   gstReportData = buildGstReport();
   const context = $("#gstReturnsReportContext");
@@ -1837,6 +1956,7 @@ function bindGstReturns() {
     }
   }, "Importing..."));
   $("#deleteGst2bDataBtn")?.addEventListener("click", withBusyClick(deleteGst2bData, "Deleting..."));
+  $("#deleteGstr1DataBtn")?.addEventListener("click", withBusyClick(deleteAllGstr1Returns, "Deleting..."));
   $("#gst2bSupplierSearch")?.addEventListener("input", () => {
     if (gstReportTab === "supplier-summary") renderGstReturnsTable(gstReportData || buildGstReport());
   });

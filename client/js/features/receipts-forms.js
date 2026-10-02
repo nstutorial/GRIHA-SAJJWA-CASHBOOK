@@ -301,6 +301,11 @@ async function saveReceipt(event) {
     return;
   }
   form.customer.setCustomValidity("");
+  if (num(form.bank.value) > 0 && !cashbookAccountById(form.bankAccountId?.value)) {
+    toast("Select the bank account that received this payment.");
+    form.bankAccountId?.focus();
+    return;
+  }
   setReceiptSaving(true);
   try {
     const calc = receiptMath();
@@ -853,8 +858,8 @@ function bindForms() {
   });
   $("#customerModalForm").stateCode.addEventListener("input", event => cleanStateCodeInput(event.target));
   $("#settingsForm").addEventListener("submit", withBusySubmit(saveSettings, "Saving..."));
-  $("#settingsBankAccountForm")?.addEventListener("submit", withBusySubmit(saveSettingsBankAccount, "Saving..."));
-  $("#settingsBankAccountForm")?.addEventListener("reset", () => setTimeout(() => { const form = $("#settingsBankAccountForm"); if (form) form.elements.namedItem("id").value = ""; }, 0));
+  $("#saveSettingsBankAccountBtn")?.addEventListener("click", withBusyClick(saveSettingsBankAccount, "Saving..."));
+  $("#cancelSettingsBankAccountBtn")?.addEventListener("click", cancelSettingsBankAccountEdit);
   $("#settingsDefaultBankAccount")?.addEventListener("change", withBusyControl($("#settingsDefaultBankAccount"), async event => {
     const accountId = text(event.currentTarget.value);
     await saveSettingValue("cashbookDefaultBankAccountId", accountId);
@@ -982,6 +987,11 @@ async function savePayment(event) {
     if (cashReceived + bankReceived + financeReceived <= 0) {
       toast("Enter cash, bank, or finance amount received.");
       f.amount.focus();
+      return;
+    }
+    if (bankReceived > 0 && !cashbookAccountById(f.bankAccountId?.value)) {
+      toast("Select the bank account that received these funds.");
+      f.bankAccountId?.focus();
       return;
     }
     const transaction = {
