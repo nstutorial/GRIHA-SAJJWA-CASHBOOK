@@ -1642,6 +1642,35 @@ function gstFyExcelSheetRows(rows) {
   }));
 }
 
+async function exportGst2bMatchExcel() {
+  const report = buildGstReport();
+  const query = text($("#gst2bMatchSearch")?.value).toLowerCase();
+  const rows = report.reconciliation.filter(row => !query
+    || `${row.invoiceNo} ${row.supplier} ${row.gstin} ${row.status}`.toLowerCase().includes(query));
+  if (!rows.length) return toast("No GSTR-2B match rows to export.");
+  await ensureGstExcelSupport();
+  const worksheetRows = rows.map(row => ({
+    "Invoice": row.invoiceNo,
+    "Supplier": row.supplier,
+    "GSTIN": row.gstin,
+    "Invoice / Supply Date": row.invoiceDate,
+    "Supplier Filed Date": row.supplierFilingDate,
+    "Taxable Difference": row.checks?.taxable ?? "",
+    "IGST Difference": row.checks?.igst ?? "",
+    "CGST Difference": row.checks?.cgst ?? "",
+    "SGST Difference": row.checks?.sgst ?? "",
+    "GSTR-2B Total": row.statementTotal,
+    "Book Total": row.bookTotal,
+    "Difference": row.variance,
+    "Status": row.status
+  }));
+  const worksheet = XLSX.utils.json_to_sheet(worksheetRows);
+  worksheet["!cols"] = [18, 30, 20, 18, 18, 18, 16, 16, 16, 18, 18, 16, 32].map(wch => ({ wch }));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "GSTR-2B Match");
+  XLSX.writeFile(workbook, "gstr-2b-match.xlsx");
+}
+
 async function exportGstFyExcel() {
   const rows = gstFyExportRows();
   if (!rows.length) return toast("No financial-year GST data to export.");
@@ -2066,6 +2095,7 @@ function bindGstReturns() {
     activateGstReportTab(button.dataset.gstReportTab);
     renderGstReturns();
   }));
+  $("#gst2bMatchExcelBtn")?.addEventListener("click", withBusyClick(exportGst2bMatchExcel, "Exporting..."));
   $("#exportGstReturnsBtn")?.addEventListener("click", withBusyClick(() => csvDownload(`gst-${gstReportTab}.csv`, gstReturnsExportRows()), "Exporting..."));
 }
 
