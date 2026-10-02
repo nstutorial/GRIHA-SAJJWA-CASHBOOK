@@ -1067,8 +1067,9 @@ async function saveSettings(event) {
     stateCode: normalizeStateCode(form.businessStateCode.value) || stateCodeFromGstin(form.businessGstin.value) || businessStateCode(),
     gstin: text(form.businessGstin.value)
   };
+  const defaultBankAccountId = cashbookDefaultBankAccountId();
   const account = {
-    ...(cashbookAccountById(form.defaultBankAccountId.value) || accountDetails())
+    ...(cashbookAccountById(defaultBankAccountId) || accountDetails())
   };
   const settings = {
     auto: form.receiptMemoAuto.checked,
@@ -1083,7 +1084,7 @@ async function saveSettings(event) {
   try {
     saveStorageMode(form.localStorageMode?.checked ? "local" : "auto");
     await saveSettingValue("businessProfile", profile);
-    await saveSettingValue("cashbookDefaultBankAccountId", text(form.defaultBankAccountId.value));
+    await saveSettingValue("cashbookDefaultBankAccountId", defaultBankAccountId);
     await saveSettingValue("accountDetails", account);
     await saveSettingValue(CASHBOOK_BANK_ACCOUNTS_KEY, cashbookBankAccounts());
     await saveSettingValue("billTemplate", form.billTemplate.value === "modern" ? "modern" : "classic");
