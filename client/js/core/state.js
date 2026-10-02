@@ -4,7 +4,7 @@ const AUTH_TOKEN_KEY = "gsSteelAuthTokenV1";
 const OFFLINE_AUTH_KEY = "gsSteelOfflineAuthV1";
 const THEME_KEY = "gsSteelThemeV1";
 const OFFLINE_TOKEN_PREFIX = "offline:";
-const BACKUP_DATA_KEYS = ["transactions", "dues", "customers", "cheques", "outgoingCheques", "suppliers", "supplierOpeningBalances", "items", "purchases", "notes", "settings", "auditLogs", "manualCreditors", "manualChartAccounts"];
+const BACKUP_DATA_KEYS = ["transactions", "dues", "customers", "cheques", "outgoingCheques", "suppliers", "supplierOpeningBalances", "items", "purchases", "creditDebitNotes", "notes", "settings", "auditLogs", "manualCreditors", "manualChartAccounts"];
 const DEV_API_BASE = "http://127.0.0.1:5000";
 const API_BASE_URLS = window.location.protocol === "file:"
   ? [DEV_API_BASE]
@@ -20,6 +20,7 @@ const VIEWS = {
   gstReturns: ["GST Returns", "Prepare GSTR-1, GSTR-3B, HSN summaries, and eligible ITC reports by period."],
   receipt: ["Receipt / Invoice", "Create GST-style sales receipts with cash, bank, Bajaj, due, and print output."],
   quotations: ["Business Quotations", "Create printable quotations for any business profile without posting a sale or payment."],
+  creditDebitNotes: ["Credit / Debit Notes", "Create and manage sales and purchase credit notes and debit notes."],
   payment: ["Payment Voucher", "Record cash or bank expenses into the transaction ledger."],
   transfers: ["Balance Transfer", "Move balance between cash, bank, and finance accounts."],
   ledger: ["Transaction Ledger", "Search and export the full transaction book imported from Excel."],
@@ -54,6 +55,7 @@ let user = {
   supplierOpeningBalances: [],
   items: [],
   purchases: [],
+  creditDebitNotes: [],
   notes: [],
   settings: [],
   auditLogs: [],
@@ -432,6 +434,7 @@ const data = {
   supplierOpeningBalances: () => cachedData("supplierOpeningBalances", () => [...seedRows("supplierOpeningBalances").map(normalizeSupplierOpeningBalance), ...(user.supplierOpeningBalances || []).map(normalizeSupplierOpeningBalance)]),
   items: () => cachedData("items", () => [...seedRows("items").map(normalizeItem), ...(user.items || []).map(normalizeItem)]),
   purchases: () => cachedData("purchases", () => [...seedRows("purchases").map(normalizePurchase), ...(user.purchases || []).map(normalizePurchase)]),
+  creditDebitNotes: () => cachedData("creditDebitNotes", () => [...seedRows("creditDebitNotes"), ...(user.creditDebitNotes || [])]),
   notes: () => cachedData("notes", () => [...seedRows("notes").map(normalizeNote), ...user.notes.map(normalizeNote)]),
   auditLogs: () => cachedData("auditLogs", () => [...seedRows("auditLogs"), ...(user.auditLogs || [])]),
   manualCreditors: () => cachedData("manualCreditors", () => [...seedRows("manualCreditors"), ...(user.manualCreditors || [])].map(row => ({ _id: text(row._id), id: text(row.entryId ?? row.id ?? row._id), party: text(row.party), fy: text(row.fy), balance: num(row.balance) }))),
@@ -470,6 +473,7 @@ function fullBackupData() {
     supplierOpeningBalances: data.supplierOpeningBalances(),
     items: backupItems(),
     purchases: data.purchases(),
+    creditDebitNotes: data.creditDebitNotes(),
     notes: data.notes(),
     settings: mergedSettings(),
     auditLogs: data.auditLogs(),
@@ -543,6 +547,7 @@ function normalizeBackupPayload(payload) {
     supplierOpeningBalances: (source.supplierOpeningBalances || []).map(normalizeSupplierOpeningBalance),
     items: (source.items || []).map(normalizeItem),
     purchases: (source.purchases || []).map(normalizePurchase),
+    creditDebitNotes: Array.isArray(source.creditDebitNotes) ? source.creditDebitNotes : [],
     notes: (source.notes || []).map(normalizeNote),
     settings: normalizeSettings(source.settings),
     auditLogs: source.auditLogs || [],
@@ -576,6 +581,7 @@ function emptyUserData() {
     supplierOpeningBalances: [],
     items: [],
     purchases: [],
+    creditDebitNotes: [],
     notes: [],
     settings: [],
     auditLogs: [],

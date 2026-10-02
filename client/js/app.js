@@ -115,6 +115,9 @@ function renderCurrentView() {
     case "purchases":
       renderPurchases();
       break;
+    case "creditDebitNotes":
+      renderCreditDebitNotes();
+      break;
     case "audit":
       renderAuditLog();
       break;
@@ -332,6 +335,7 @@ async function init() {
   bindQuotationForms();
   bindFilters();
   bindAccountsManager();
+  bindCreditDebitNotes();
   bindCashbook();
   bindExports();
   addReceiptItem({ description: "SAMSUNG LED 24", hsn: "8517", qty: 1, gst: 18, total: 5800 });
@@ -371,6 +375,7 @@ async function init() {
   seed.manualChartAccounts = seed.manualChartAccounts || [];
   seed.businesses = seed.businesses || [];
   seed.quotations = seed.quotations || [];
+  seed.creditDebitNotes = seed.creditDebitNotes || [];
   user.settings = user.settings || [];
   user.outgoingCheques = user.outgoingCheques || [];
   user.suppliers = user.suppliers || [];
@@ -380,6 +385,7 @@ async function init() {
   user.manualChartAccounts = user.manualChartAccounts || [];
   user.businesses = user.businesses || [];
   user.quotations = user.quotations || [];
+  user.creditDebitNotes = user.creditDebitNotes || [];
   setDefaults();
   loadDenominationSettings();
   await migrateGeneratedCustomerIds();

@@ -155,6 +155,7 @@
       <button data-view="suppliers">Supplier Management</button>
       <button data-view="items">Items Management</button>
       <button data-view="purchases">Purchases</button>
+      <button data-view="creditDebitNotes">Credit / Debit Notes</button>
         <button data-view="sales">Sales Dashboard</button>
       <button data-view="gstOverview">GST Overview</button>
         <button data-view="tallyGstCompare">Tally vs GST</button>
@@ -986,7 +987,7 @@
         <section class="cashbook-reconcile-panel">
           <h3>Bank reconciliation</h3>
           <p class="panel-subtitle">Upload a CSV with Date and Amount (signed) or Debit/Credit columns. Dates may be ISO (YYYY-MM-DD) or DD/MM/YYYY. Matches use account, date, direction, and amount; review every exception.</p>
-          <div class="cashbook-reconcile-controls"><label>Bank account<select id="cashbookReconcileAccount"></select></label><label>Statement CSV<input id="cashbookStatementFile" type="file" accept=".csv,text/csv"></label></div>
+          <div class="cashbook-reconcile-controls"><label>Bank account<select id="cashbookReconcileAccount"></select></label><label>Statement CSV<input id="cashbookStatementFile" type="file" accept=".csv,text/csv"></label><button type="button" class="secondary" id="cashbookDownloadStatementTemplate">Download CSV template</button></div>
           <button type="button" class="secondary" id="cashbookClearStatement">Clear saved statement</button>
           <div id="cashbookReconcileSummary" class="panel-subtitle" role="status"></div>
           <div class="table-wrap"><table id="cashbookReconcileTable"></table></div>
@@ -1281,6 +1282,42 @@
           <table id="purchaseTable"></table>
         </div>
       </section>
+    </section>
+
+    <section id="creditDebitNotes" class="view">
+      <section class="panel">
+        <div class="panel-head">
+          <div><h2>Credit / Debit Notes</h2><p class="panel-subtitle">Record GST sales or purchase adjustments against an original invoice. These entries are saved in this register and do not post cash or bank transactions.</p></div>
+          <button id="exportCreditDebitNotesBtn" type="button" class="secondary">Export CSV</button>
+        </div>
+        <div id="creditDebitNoteSummary" class="sales-kpi-grid"></div>
+        <form id="creditDebitNoteForm" class="panel" autocomplete="off">
+          <input name="entryId" type="hidden">
+          <div class="panel-head"><h3 id="creditDebitNoteFormTitle">New note</h3><span id="creditDebitNoteTotal" class="gst-overview-range" aria-live="polite">Total: ₹0.00</span></div>
+          <div class="form-grid">
+            <label>Date<input name="date" type="date" required></label>
+            <label>Applies to<select name="category" required><option value="sales">Sales</option><option value="purchase">Purchase</option></select></label>
+            <label>Note type<select name="noteType" required><option value="credit">Credit note · reduce original value</option><option value="debit">Debit note · increase original value</option></select></label>
+            <label>Note number<input name="noteNo" required maxlength="80" placeholder="CN-001 or DN-001"></label>
+            <label>Customer / supplier<input name="party" list="creditDebitPartyList" required placeholder="Select or enter party"></label>
+            <label>Party GSTIN<input name="gstin" maxlength="15" placeholder="Optional GSTIN"></label>
+            <label>Original invoice number<input name="originalInvoice" placeholder="Invoice being adjusted"></label>
+            <label>Reason<input name="reason" placeholder="Return, rate difference, etc."></label>
+            <label>Taxable value<input name="taxable" type="number" min="0" step="0.01" required value="0"></label>
+            <label>IGST<input name="igst" type="number" min="0" step="0.01" value="0"></label>
+            <label>CGST<input name="cgst" type="number" min="0" step="0.01" value="0"></label>
+            <label>SGST / UTGST<input name="sgst" type="number" min="0" step="0.01" value="0"></label>
+            <label>Cess<input name="cess" type="number" min="0" step="0.01" value="0"></label>
+            <label class="receipt-address">Remark<textarea name="remark" rows="2" placeholder="Optional details"></textarea></label>
+          </div>
+          <div class="actions"><button type="submit" id="saveCreditDebitNoteBtn">Save note</button><button type="button" class="secondary" id="cancelCreditDebitNoteEditBtn" hidden>Cancel edit</button></div>
+        </form>
+        <section class="gst-overview-section">
+          <div class="panel-head"><h3>Note Register</h3><label>Search<input id="creditDebitNoteSearch" type="search" placeholder="Note, party, invoice, GSTIN" autocomplete="off"></label></div>
+          <div class="table-wrap tall"><table id="creditDebitNoteTable"></table></div>
+        </section>
+      </section>
+      <datalist id="creditDebitPartyList"></datalist>
     </section>
 
     <section id="items" class="view">
@@ -1584,6 +1621,7 @@
   <script src="js/pages/customers-items.js"></script>
   <script src="js/pages/cheques.js"></script>
   <script src="js/pages/suppliers-purchases.js"></script>
+  <script src="js/pages/credit-debit-notes.js"></script>
   <script src="js/pages/accounts-manager.js"></script>
   <script src="js/pages/cashbook.js"></script>
   <script src="js/pages/audit.js"></script>

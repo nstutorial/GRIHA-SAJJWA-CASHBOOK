@@ -342,6 +342,16 @@ function cashbookExportRows() {
 }
 
 function bindCashbook() {
+  $("#cashbookDownloadStatementTemplate")?.addEventListener("click", () => {
+    const csv = 'Date,Description,Debit,Credit\r\n';
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "bank-reconciliation-statement-template.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  });
   $("#cashbookExportBtn")?.addEventListener("click", withBusyClick(() => {
     const { from, to } = cashbookDateRange();
     csvDownload(`cash-book-${from}-to-${to}.csv`, cashbookExportRows());
