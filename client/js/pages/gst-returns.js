@@ -789,8 +789,6 @@ function uniqueGst2bInvoices(invoices) {
       }
       invoices = uniqueGst2bInvoices(invoices);
       if (!invoices.length) throw new Error("No invoice rows found. Select a GSTR-2B JSON, Excel, or CSV statement.");
-      const fileSupplierGstins = [...new Set(invoices.map(row => text(row.gstin).toUpperCase()).filter(Boolean))];
-      if (fileSupplierGstins.length > 1) throw new Error(`This file contains multiple supplier GSTINs (${fileSupplierGstins.join(", ")}). Check that it belongs to the selected business before importing.`);
       const result = await apiRequest("/api/gst-returns/gstr2b/import", {
         method: "POST",
         body: JSON.stringify({ fileName: file.name, invoices })
