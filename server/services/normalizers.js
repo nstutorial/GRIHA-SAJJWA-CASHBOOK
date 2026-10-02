@@ -139,6 +139,35 @@ function normalizePurchase(row) {
   };
 }
 
+function normalizeCreditDebitNote(row) {
+  const noteType = text(row.noteType).toLowerCase();
+  const category = text(row.category).toLowerCase();
+  const taxable = num(row.taxable);
+  const igst = num(row.igst);
+  const cgst = num(row.cgst);
+  const sgst = num(row.sgst);
+  const cess = num(row.cess);
+  return {
+    entryId: text(row.entryId),
+    date: parseDate(row.date),
+    category: category === "purchase" ? "purchase" : "sales",
+    noteType: noteType === "debit" ? "debit" : "credit",
+    noteNo: text(row.noteNo),
+    party: text(row.party),
+    gstin: text(row.gstin).toUpperCase(),
+    originalInvoice: text(row.originalInvoice),
+    reason: text(row.reason),
+    taxable,
+    igst,
+    cgst,
+    sgst,
+    cess,
+    total: num(row.total) || taxable + igst + cgst + sgst + cess,
+    remark: text(row.remark),
+    source: text(row.source) || "web"
+  };
+}
+
 function normalizeRateHistoryEntry(row = {}) {
   return {
     date: parseDate(row.date ?? row.changedAt ?? row.createdAt) || new Date().toISOString().slice(0, 10),
@@ -233,6 +262,7 @@ module.exports = {
   supplierOpeningBalances: normalizeSupplierOpeningBalance,
   items: normalizeItem,
   purchases: normalizePurchase,
+  creditDebitNotes: normalizeCreditDebitNote,
   notes: normalizeNote,
   businesses: normalizeBusiness,
   quotations: normalizeQuotation,

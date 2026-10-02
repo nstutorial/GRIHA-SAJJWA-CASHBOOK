@@ -46,6 +46,7 @@ function naturalFilter(collection, row) {
     if (text(row.billNo)) return { billNo: text(row.billNo), supplier: text(row.supplier), item: text(row.item) };
     return { date: parseDate(row.date), supplier: text(row.supplier), item: text(row.item), amount: num(row.amount) };
   }
+  if (collection === "creditDebitNotes" && text(row.entryId)) return { entryId: text(row.entryId) };
   if (collection === "notes") return { date: parseDate(row.date), title: text(row.title), total: num(row.total) };
   if (["manualCreditors", "manualChartAccounts"].includes(collection) && text(row.entryId)) return { entryId: text(row.entryId) };
   if (collection === "settings" && text(row.key)) return { key: text(row.key) };
@@ -99,6 +100,7 @@ function collectionSearchFields(collection) {
     businesses: ["name", "address", "city", "state", "gstin", "mobile", "email"],
     quotations: ["quotationNo", "businessName", "date", "status", "notes"],
     purchases: ["supplier", "item", "billNo", "remark", "date"],
+    creditDebitNotes: ["noteNo", "party", "gstin", "originalInvoice", "reason", "remark", "date"],
     notes: ["title", "remark", "date"],
     manualCreditors: ["party", "fy"],
     manualChartAccounts: ["particular", "side", "fy"],

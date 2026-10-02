@@ -66,7 +66,7 @@ function createCollectionsRouter({ root }) {
     try {
       const payload = req.body || {};
       const result = {};
-      const collections = ["transactions", "dues", "customers", "cheques", "outgoingCheques", "suppliers", "supplierOpeningBalances", "items", "purchases", "notes", "manualCreditors", "manualChartAccounts", "businesses", "quotations"];
+      const collections = ["transactions", "dues", "customers", "cheques", "outgoingCheques", "suppliers", "supplierOpeningBalances", "items", "purchases", "creditDebitNotes", "notes", "manualCreditors", "manualChartAccounts", "businesses", "quotations"];
 
       for (const collection of collections) {
         const rows = Array.isArray(payload[collection]) ? payload[collection] : [];
@@ -135,6 +135,24 @@ function createCollectionsRouter({ root }) {
         const duplicate = sameVoucherDay.some(row => text(row.party).toLowerCase() === party.toLowerCase());
         if (duplicate) {
           res.status(409).json({ error: `Voucher ${memo} already exists for this date and party.` });
+          return;
+        }
+      }
+      if (collection === "creditDebitNotes") {
+        const { noteNo, category, noteType, party } = req.body || {};
+        if (!text(noteNo) || !text(req.body?.date) || !text(party)) {
+          res.status(400).json({ error: "Date, note number, and party are required." });
+          return;
+        }
+        const negativeAmountField = ["taxable", "igst", "cgst", "sgst", "cess", "total"].find(field => Number(req.body?.[field] || 0) < 0);
+        if (negativeAmountField) {
+          res.status(400).json({ error: `${negativeAmountField} cannot be negative.` });
+          return;
+        }
+        const existingNotes = await models.creditDebitNotes.find({ category: text(category), noteType: text(noteType) }).select("noteNo party").lean();
+        if (existingNotes.some(row => text(row.noteNo).toLowerCase() === text(noteNo).toLowerCase()
+          && text(row.party).toLowerCase() === text(party).toLowerCase())) {
+          res.status(409).json({ error: `This ${text(noteType)} note number already exists for ${text(party)}.` });
           return;
         }
       }

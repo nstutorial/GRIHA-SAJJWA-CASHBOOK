@@ -41,6 +41,42 @@ router.get("/gstr1", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+router.delete("/gstr1/:returnKey", async (req, res, next) => {
+  try {
+    const returnKey = text(req.params.returnKey).toUpperCase();
+    if (!/^[0-9A-Z]{15}\\|(0[1-9]|1[0-2])\\d{4}$/.test(returnKey)) {
+      res.status(400).json({ error: "Invalid GSTR-1 return key." });
+      return;
+    }
+    const row = await models.gstr1Returns.findOneAndDelete({ returnKey }).lean();
+    if (!row) {
+      res.status(404).json({ error: "GSTR-1 return not found." });
+      return;
+    }
+    await logAudit(req, {
+      action: "delete",
+      collection: "gstr1Returns",
+      recordId: returnKey,
+      before: { gstin: row.gstin, returnPeriod: row.returnPeriod, sourceFile: row.sourceFile, importedAt: row.importedAt },
+      meta: { gstin: row.gstin, returnPeriod: row.returnPeriod }
+    });
+    res.json({ ok: true, returnKey });
+  } catch (error) { next(error); }
+});
+
+router.delete("/gstr1", async (req, res, next) => {
+  try {
+    const result = await models.gstr1Returns.deleteMany({});
+    await logAudit(req, {
+      action: "delete",
+      collection: "gstr1Returns",
+      recordId: "all",
+      meta: { deletedCount: result.deletedCount || 0 }
+    });
+    res.json({ ok: true, deletedCount: result.deletedCount || 0 });
+  } catch (error) { next(error); }
+});
+
 router.post("/gstr1/import", async (req, res, next) => {
   try {
     const gstin = text(req.body.gstin).toUpperCase();
@@ -221,6 +257,11 @@ router.post("/gstr2b/import", async (req, res, next) => {
     }
     if (!uniqueInvoices.size) {
       res.status(400).json({ error: "No valid invoice numbers were found in the import." });
+      return;
+    }
+    const supplierGstins = [...new Set([...uniqueInvoices.values()].map(row => row.supplierGstin).filter(Boolean))];
+    if (supplierGstins.length > 1) {
+      res.status(400).json({ error: "This GSTR-2B file contains invoices for multiple supplier GSTINs. Check the file and import the correct business statement." });
       return;
     }
     const operations = [...uniqueInvoices.values()].map(record => ({

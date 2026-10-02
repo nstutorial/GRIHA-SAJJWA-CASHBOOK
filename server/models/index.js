@@ -145,6 +145,27 @@ const purchaseSchema = new mongoose.Schema({
 purchaseSchema.index({ supplier: 1, date: -1 });
 purchaseSchema.index({ billNo: 1, supplier: 1, item: 1 });
 
+const creditDebitNoteSchema = new mongoose.Schema({
+  entryId: { type: String, required: true, unique: true, index: true },
+  date: String,
+  category: { type: String, enum: ["sales", "purchase"], required: true },
+  noteType: { type: String, enum: ["credit", "debit"], required: true },
+  noteNo: { type: String, required: true },
+  party: { type: String, required: true },
+  gstin: String,
+  originalInvoice: String,
+  reason: String,
+  taxable: Number,
+  igst: Number,
+  cgst: Number,
+  sgst: Number,
+  cess: Number,
+  total: Number,
+  remark: String,
+  source: String
+}, baseOptions);
+creditDebitNoteSchema.index({ date: -1, category: 1, noteType: 1 });
+
 const gst2bInvoiceSchema = new mongoose.Schema({
   invoiceNo: { type: String, required: true },
   invoiceKey: { type: String, required: true },
@@ -325,6 +346,7 @@ module.exports = {
   manualChartAccounts: model("ManualChartAccount", manualChartAccountSchema),
   outgoingCheques: model("OutgoingCheque", outgoingChequeSchema),
   purchases: model("Purchase", purchaseSchema),
+  creditDebitNotes: model("CreditDebitNote", creditDebitNoteSchema),
   quotations: model("Quotation", quotationSchema),
   settings: model("Setting", settingSchema),
   suppliers: model("Supplier", supplierSchema),
