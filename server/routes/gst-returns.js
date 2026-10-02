@@ -259,11 +259,6 @@ router.post("/gstr2b/import", async (req, res, next) => {
       res.status(400).json({ error: "No valid invoice numbers were found in the import." });
       return;
     }
-    const supplierGstins = [...new Set([...uniqueInvoices.values()].map(row => row.supplierGstin).filter(Boolean))];
-    if (supplierGstins.length > 1) {
-      res.status(400).json({ error: "This GSTR-2B file contains invoices for multiple supplier GSTINs. Check the file and import the correct business statement." });
-      return;
-    }
     const operations = [...uniqueInvoices.values()].map(record => ({
       updateOne: {
         filter: { supplierGstin: record.supplierGstin, invoiceKey: record.invoiceKey },
