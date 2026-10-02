@@ -1655,13 +1655,13 @@ async function exportGst2bMatchExcel() {
     "GSTIN": row.gstin,
     "Invoice / Supply Date": row.invoiceDate,
     "Supplier Filed Date": row.supplierFilingDate,
-    "Taxable Difference": row.checks?.taxable ?? "",
-    "IGST Difference": row.checks?.igst ?? "",
-    "CGST Difference": row.checks?.cgst ?? "",
-    "SGST Difference": row.checks?.sgst ?? "",
+    "Taxable Difference": row.checks?.taxable == null ? "" : Math.abs(num(row.checks.taxable)),
+    "IGST Difference": row.checks?.igst == null ? "" : Math.abs(num(row.checks.igst)),
+    "CGST Difference": row.checks?.cgst == null ? "" : Math.abs(num(row.checks.cgst)),
+    "SGST Difference": row.checks?.sgst == null ? "" : Math.abs(num(row.checks.sgst)),
     "GSTR-2B Total": row.statementTotal,
     "Book Total": row.bookTotal,
-    "Difference": row.variance,
+    "Difference": Math.abs(num(row.variance)),
     "Status": row.status
   }));
   const worksheet = XLSX.utils.json_to_sheet(worksheetRows);
