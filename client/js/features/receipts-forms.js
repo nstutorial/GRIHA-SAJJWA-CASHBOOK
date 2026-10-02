@@ -886,7 +886,7 @@ function bindForms() {
   $("#saveActionLockBtn")?.addEventListener("click", withBusyClick(() => saveActionLockPassword(), "Saving..."));
   $("#changeOwnPasswordBtn")?.addEventListener("click", withBusyClick(() => changeOwnPassword(), "Saving..."));
   $("#refreshUsersBtn")?.addEventListener("click", withBusyClick(() => renderUserManagement(), "Refreshing..."));
-  $("#createUserForm")?.addEventListener("submit", withBusySubmit(createUserFromSettings, "Creating..."));
+  $("#createUserBtn")?.addEventListener("click", withBusyClick(createUserFromSettings, "Creating..."));
   $("#settingsAddReceiptHeadBtn").addEventListener("click", withBusyClick(() => addHeadFromSettings("receipt"), "Saving..."));
   $("#settingsAddPaymentHeadBtn").addEventListener("click", withBusyClick(() => addHeadFromSettings("payment"), "Saving..."));
   $("#settingsReceiptHeadInput").addEventListener("keydown", event => {

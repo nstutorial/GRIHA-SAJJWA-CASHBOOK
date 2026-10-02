@@ -821,11 +821,17 @@ async function resetUserPassword(userId) {
 }
 
 async function createUserFromSettings(event) {
-  event.preventDefault();
-  const form = event.currentTarget;
+  const form = $("#createUserForm");
+  if (!form) return;
+  const name = form.querySelector('[name="name"]');
+  const username = form.querySelector('[name="username"]');
+  const password = form.querySelector('[name="password"]');
+  const role = form.querySelector('[name="role"]');
+  if (![name, username, password, role].every(input => input?.reportValidity())) return;
   try {
-    await apiCreateUser({ name: text(form.name.value), username: text(form.username.value).toLowerCase(), password: form.password.value, role: form.role.value });
-    form.reset();
+    await apiCreateUser({ name: text(name.value), username: text(username.value).toLowerCase(), password: password.value, role: role.value });
+    form.querySelectorAll("input").forEach(input => { input.value = ""; });
+    role.value = "user";
     await renderUserManagement();
     toast("User account created.");
   } catch (error) {

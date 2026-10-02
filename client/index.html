@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GRIHA SAJJWA Cashbook</title>
+  <title>G.S. Steel Furniture Cashbook</title>
   <link rel="stylesheet" href="css/styles.css">
   <style>
     .gst-report-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; border-bottom: 1px solid #d1d5db; min-width: 0; }
@@ -100,7 +100,7 @@
       <div class="auth-brand">
         <span class="mark">GS</span>
         <div>
-          <strong>GRIHA SAJJWA</strong>
+          <strong>G.S. Steel Furniture</strong>
           <small>Cashbook secure access</small>
         </div>
       </div>
@@ -132,7 +132,7 @@
     <div class="brand">
       <span class="mark" id="brandMark">GS</span>
       <div>
-        <strong id="brandName">GRIHA SAJJWA</strong>
+        <strong id="brandName">G.S. Steel Furniture</strong>
         <small id="brandSubtitle">Cashbook and billing</small>
       </div>
       <button class="theme-toggle" id="themeToggleBtn" type="button" aria-label="Switch to dark theme" title="Switch theme">
@@ -870,12 +870,12 @@
                   <h4>User List</h4>
                   <button id="refreshUsersBtn" type="button" class="secondary">Refresh users</button>
                 </div>
-                <form id="createUserForm" class="create-user-form" hidden>
+                <div id="createUserForm" class="create-user-form" hidden>
                   <label>Name<input name="name" required></label><label>Username<input name="username" required minlength="3" maxlength="64"></label>
                   <label>Temporary password<input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
                   <label>Role<select name="role"><option value="user">User</option><option value="admin">Admin</option></select></label>
-                  <button type="submit">Create user</button>
-                </form>
+                  <button id="createUserBtn" type="button">Create user</button>
+                </div>
                 <div class="table-wrap">
                   <table id="settingsUsersTable"></table>
                 </div>
@@ -1441,7 +1441,7 @@
       </div>
       <div class="customer-modal-grid">
         <section class="customer-lookup">
-          <h3 id="customerModalBusiness">GRIHA SAJJWA</h3>
+          <h3 id="customerModalBusiness">GS STEEL FURNITURE</h3>
           <label>Type Here Customer Name
             <input id="modalCustomerSearch" placeholder="Search customer or mobile">
           </label>
