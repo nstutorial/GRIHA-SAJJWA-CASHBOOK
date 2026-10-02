@@ -827,7 +827,24 @@ async function createUserFromSettings(event) {
   const username = form.querySelector('[name="username"]');
   const password = form.querySelector('[name="password"]');
   const role = form.querySelector('[name="role"]');
-  if (![name, username, password, role].every(input => input?.reportValidity())) return;
+  if (!name?.value.trim()) {
+    name?.setCustomValidity("Please enter a name.");
+    name?.reportValidity();
+    name?.setCustomValidity("");
+    return;
+  }
+  if (!username?.value.trim() || !username.checkValidity()) {
+    username?.setCustomValidity(username?.value.trim() ? "Enter a username with at least 3 characters." : "Please enter a username.");
+    username?.reportValidity();
+    username?.setCustomValidity("");
+    return;
+  }
+  if (!password?.value || !password.checkValidity()) {
+    password?.setCustomValidity(password?.value ? "Temporary password must be at least 8 characters." : "Please enter a temporary password.");
+    password?.reportValidity();
+    password?.setCustomValidity("");
+    return;
+  }
   try {
     await apiCreateUser({ name: text(name.value), username: text(username.value).toLowerCase(), password: password.value, role: role.value });
     form.querySelectorAll("input").forEach(input => { input.value = ""; });
