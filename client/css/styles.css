@@ -1157,6 +1157,8 @@ h2 { font-size: 18px; }
 .gst-fy-grand-total b { font-size: 16px; font-variant-numeric: tabular-nums; }
 .gst-fy-table-wrap { display: block; width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; border: 1px solid var(--line); border-radius: 8px; }
 .gst-fy-table { width: max-content; min-width: 1580px; max-width: none; table-layout: fixed; border-collapse: collapse; border: 0; margin: 0; }
+.gst-fy-table.gst-fy-taxable-only { min-width: 680px; }
+.gst-fy-taxable-toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 650; cursor: pointer; }
 .gst-fy-table th, .gst-fy-table td { white-space: nowrap; border: 1px solid var(--line); }
 .gst-fy-table thead th { text-align: center; vertical-align: middle; }
 .gst-fy-table .gst-fy-month-heading { min-width: 210px; text-align: left; background: var(--brand); color: #fff; }

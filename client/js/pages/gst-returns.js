@@ -350,17 +350,17 @@ async function importGstr1Return() {
     body: JSON.stringify({ ...parsed, fileName: file.name })
   });
   await loadGstr1ReturnsFromDb();
-  const importedMonth = parsed.returnPeriod.slice(0, 2);
+  const importedMonth = Number(parsed.returnPeriod.slice(0, 2));
   const importedYear = parsed.returnPeriod.slice(2);
-  const periodControl = $("#gstReturnsPeriod");
-  const monthControl = $("#gstReturnsMonth");
+  const isQuarterly = parsed.filingType.toUpperCase() === "Q";
   const tableRangeMode = $("#gstReturnsTableRangeMode");
   const tableRangeMonth = $("#gstReturnsTableMonth");
-  if (periodControl) periodControl.value = parsed.filingType.toUpperCase() === "Q" ? "quarter" : "month";
-  if (monthControl) monthControl.value = `${importedYear}-${importedMonth}`;
-  if (tableRangeMode) tableRangeMode.value = "month";
-  if (tableRangeMonth) tableRangeMonth.value = `${importedYear}-${importedMonth}`;
-  syncGstReturnsPeriodControls();
+  if (tableRangeMode) tableRangeMode.value = isQuarterly ? "quarter" : "month";
+  if (tableRangeMonth) {
+    const anchorMonth = isQuarterly ? importedMonth - 2 : importedMonth;
+    tableRangeMonth.value = `${importedYear}-${String(anchorMonth).padStart(2, "0")}`;
+  }
+  syncGstReturnsTableRangeControls();
   activateGstReportTab("gstr1-imported");
   const status = $("#gstr1ImportStatus");
   if (status) status.textContent = `${result.replaced ? "Replaced" : "Imported"} GSTR-1 ${parsed.returnPeriod} (${parsed.gstin}): ${parsed.invoices.length} invoice rows and ${parsed.summaries.length} aggregate rows from ${parsed.sections.join(", ")}.`;
@@ -387,55 +387,6 @@ async function loadGstr3bReturnsFromDb() {
     renderGstReturns();
   } catch (error) {
     console.warn("Could not load saved GSTR-3B returns:", error);
-  }
-}
-
-function gstReportDates() {
-  const period = text($("#gstReturnsPeriod")?.value) || "month";
-  const month = text($("#gstReturnsMonth")?.value) || todayIso().slice(0, 7);
-  const year = Number($("#gstReturnsYear")?.value) || Number(todayIso().slice(0, 4));
-  if (period === "custom") {
-    return { from: text($("#gstReturnsFrom")?.value), to: text($("#gstReturnsTo")?.value) };
-  }
-  if (period === "fy") return { from: `${year}-04-01`, to: `${year + 1}-03-31` };
-  if (period === "calendar-year") return { from: `${year}-01-01`, to: `${year}-12-31` };
-  if (period === "quarter") {
-    const monthNumber = Number(month.slice(5, 7));
-    const quarterStart = Math.floor((monthNumber - 1) / 3) * 3 + 1;
-    const from = `${month.slice(0, 4)}-${String(quarterStart).padStart(2, "0")}-01`;
-    const end = new Date(Number(month.slice(0, 4)), quarterStart + 2, 0);
-    return { from, to: end.toISOString().slice(0, 10) };
-  }
-  const end = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0);
-  return { from: `${month}-01`, to: end.toISOString().slice(0, 10) };
-}
-
-function syncGstReturnsPeriodControls() {
-  const period = text($("#gstReturnsPeriod")?.value) || "month";
-  const controls = [
-    ["gstReturnsMonth", ["month", "quarter"].includes(period)],
-    ["gstReturnsYear", ["fy", "calendar-year"].includes(period)],
-    ["gstReturnsFrom", period === "custom"],
-    ["gstReturnsTo", period === "custom"]
-  ];
-  controls.forEach(([id, visible]) => {
-    const label = $(`#${id}`)?.closest("label");
-    if (label) label.hidden = !visible;
-  });
-  const rangeLabel = $("#gstReturnsRangeLabel");
-  const yearLabel = $("#gstReturnsYearLabel");
-  if (yearLabel) yearLabel.firstChild.textContent = period === "calendar-year" ? "Calendar year" : "Financial year starts";
-  const customRange = period === "custom";
-  const fromLabel = $("#gstReturnsFrom")?.closest("label");
-  const toLabel = $("#gstReturnsTo")?.closest("label");
-  if (fromLabel) fromLabel.hidden = !customRange;
-  if (toLabel) toLabel.hidden = !customRange;
-  if (rangeLabel) {
-    const dates = gstReportDates();
-    rangeLabel.hidden = !customRange;
-    rangeLabel.textContent = dates.from || dates.to
-      ? `Selected range: ${dates.from || "start"} – ${dates.to || "end"}`
-      : "Choose a start and end date";
   }
 }
 
@@ -859,10 +810,9 @@ function uniqueGst2bInvoices(invoices) {
   }
 
 function buildGstReport() {
-  const dates = gstReportDates();
   const tableDates = gstReturnsTableDates();
   const inRange = date => (!tableDates.from || date >= tableDates.from) && (!tableDates.to || date <= tableDates.to);
-  const invoices = gstInvoiceRows().filter(row => inRange(row.date) && (!dates.from || row.date >= dates.from) && (!dates.to || row.date <= dates.to));
+  const invoices = gstInvoiceRows().filter(row => inRange(row.date));
   const gstr1Imports = importedGstr1ReturnsInRange(tableDates);
   const rangeFilteredImports = gstr1Imports.filter(row => {
     const bounds = gstReturnPeriodBounds(row);
@@ -903,7 +853,7 @@ function buildGstReport() {
     row.total += num(item.total);
     hsn.set(key, row);
   }));
-  const purchases = data.purchases().filter(row => inRange(parseDate(row.date)) && (!dates.from || parseDate(row.date) >= dates.from) && (!dates.to || parseDate(row.date) <= dates.to));
+  const purchases = data.purchases().filter(row => inRange(parseDate(row.date)));
   const gstr2bInvoices = (gst2bStatement?.invoices || []).filter(row => inRange(parseDate(row.invoiceDate || row.date)));
   const filteredGstr2bStatement = gst2bStatement ? { ...gst2bStatement, invoices: gstr2bInvoices } : null;
   const bookPurchasesInRange = purchases;
@@ -914,7 +864,7 @@ function buildGstReport() {
     return { taxable: total.taxable + num(row.taxable || row.amount), igst: total.igst + num(row.igst), cgst: total.cgst + num(row.cgst), sgst: total.sgst + num(row.sgst), eligible: total.eligible + tax };
   }, { taxable: 0, igst: 0, cgst: 0, sgst: 0, eligible: 0 });
   return {
-    dates, tableDates, invoices, outward, hsn: [...hsn.values()], purchases, itc,
+    tableDates, invoices, outward, hsn: [...hsn.values()], purchases, itc,
     gstr2bStatement: filteredGstr2bStatement,
     gstr1Imports, importedInvoices, importedSummaries, importedHsnRows, importedDocumentRows, importedTotals, importedMatches,
     reconciliation, supplierSummary
@@ -1568,7 +1518,6 @@ function renderGstReturns() {
   if (gst2bButton) gst2bButton.disabled = true;
   syncGstr1FileGstin();
   syncGst2bFileGstin();
-  syncGstReturnsPeriodControls();
   gstReportData = buildGstReport();
   const context = $("#gstReturnsReportContext");
   if (context) {
@@ -1579,11 +1528,8 @@ function renderGstReturns() {
       return;
     }
     const { from, to } = gstReportData.tableDates;
-    const returnScope = gstReportData.dates.from || gstReportData.dates.to
-      ? `${gstReportData.dates.from || "start"} to ${gstReportData.dates.to || "end"}`
-      : "all available periods";
     const tableScope = from || to ? `${from || "start"} to ${to || "end"}` : "all dates";
-    context.textContent = `Return period: ${returnScope} · Table date range: ${tableScope} · Variance = books minus GST statement; tolerance ₹1.`;
+    context.textContent = `Table date range: ${tableScope} · Variance = books minus GST statement; tolerance ₹1.`;
   }
   renderGstReturnsKpis(gstReportData);
   renderGstReturnsTable(gstReportData);
@@ -1640,7 +1586,16 @@ function gstFyExportRows() {
   const rows = [];
   const grand = { gstr1: { taxable: 0, igst: 0, cgst: 0, sgst: 0 }, gstr2b: { taxable: 0, igst: 0, cgst: 0, sgst: 0 } };
   years.forEach(year => {
-    year.months.forEach(month => rows.push(row(`FY ${year.fy}`, `${GST_FY_MONTH_NAMES[(month.month + 8) % 12]} ${month.year}`, month.gstr1, month.gstr2b, "Month")));
+    GST_FY_MONTH_NAMES.forEach((monthName, offset) => {
+      const calendarMonth = (offset + 3) % 12 + 1;
+      const calendarYear = Number(year.fy.slice(0, 4)) + (calendarMonth < 4 ? 1 : 0);
+      const key = `${calendarYear}-${String(calendarMonth).padStart(2, "0")}`;
+      const month = year.months.find(item => item.key === key) || {
+        gstr1: { taxable: 0, igst: 0, cgst: 0, sgst: 0 },
+        gstr2b: { taxable: 0, igst: 0, cgst: 0, sgst: 0 }
+      };
+      rows.push(row(`FY ${year.fy}`, `${monthName} ${calendarYear}`, month.gstr1, month.gstr2b, "Month"));
+    });
     rows.push(row(`FY ${year.fy}`, "Financial year total", year.totals.gstr1, year.totals.gstr2b, "FY total"));
     GST_FY_METRICS.forEach(metric => {
       grand.gstr1[metric] += year.totals.gstr1[metric];
@@ -1651,13 +1606,91 @@ function gstFyExportRows() {
   return rows;
 }
 
-function printGstFyComparison() {
+async function ensureGstExcelSupport() {
+  if (!window.XLSX) {
+    if (!ensureGstExcelSupport.promise) {
+      ensureGstExcelSupport.promise = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("Could not load Excel export support."));
+        document.head.appendChild(script);
+      });
+    }
+    await ensureGstExcelSupport.promise;
+  }
+}
+
+function gstFyExcelSheetRows(rows) {
+  return rows.map(row => ({
+    "Financial Year": row.financialYear,
+    "Month / Total": row.month,
+    "Row Type": row.rowType,
+    "GSTR-1 Taxable": row.gstr1Taxable,
+    "GSTR-1 IGST": row.gstr1IGST,
+    "GSTR-1 CGST": row.gstr1CGST,
+    "GSTR-1 SGST": row.gstr1SGST,
+    "GSTR-1 Total": row.gstr1Total,
+    "GSTR-2B Taxable": row.gstr2bTaxable,
+    "GSTR-2B IGST": row.gstr2bIGST,
+    "GSTR-2B CGST": row.gstr2bCGST,
+    "GSTR-2B SGST": row.gstr2bSGST,
+    "GSTR-2B Total": row.gstr2bTotal,
+    "Taxable Difference": row.taxableDifference,
+    "IGST Difference": row.igstDifference,
+    "CGST Difference": row.cgstDifference,
+    "SGST Difference": row.sgstDifference,
+    "Total Difference": row.totalDifference
+  }));
+}
+
+async function exportGstFyExcel() {
   const rows = gstFyExportRows();
+  if (!rows.length) return toast("No financial-year GST data to export.");
+  await ensureGstExcelSupport();
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(gstFyExcelSheetRows(rows)), "GSTR1 vs GSTR2B");
+  XLSX.writeFile(workbook, "gst-financial-year-comparison.xlsx");
+}
+
+async function exportGstFyExcelForYear(financialYear) {
+  const year = gstFyComparisonData().find(item => item.fy === financialYear);
+  if (!year) return toast(`No GST comparison data for FY ${financialYear}.`);
+  await ensureGstExcelSupport();
+  const workbook = XLSX.utils.book_new();
+  const summaryRows = gstFyExcelSheetRows(gstFyExportRows().filter(row => row.financialYear === `FY ${financialYear}`));
+  const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
+  summarySheet["!cols"] = Object.keys(summaryRows[0] || {}).map(() => ({ wch: 19 }));
+  XLSX.utils.book_append_sheet(workbook, summarySheet, "Sheet1");
+
+  GST_FY_MONTH_NAMES.forEach((monthName, offset) => {
+    const calendarMonth = (offset + 3) % 12 + 1;
+    const calendarYear = Number(financialYear.slice(0, 4)) + (calendarMonth < 4 ? 1 : 0);
+    const monthKey = `${calendarYear}-${String(calendarMonth).padStart(2, "0")}`;
+    const month = year.months.find(item => item.key === monthKey);
+    const headers = ["Source", "Type", "Invoice / section", "Date", "Customer / supplier", "GSTIN", "Taxable", "IGST", "CGST", "SGST"];
+    const documents = [
+      ...(month?.gstr1Documents || []).map(row => ["GSTR-1", row.kind, row.number, row.date, row.party, row.gstin, row.taxable, row.igst, row.cgst, row.sgst]),
+      ...(month?.gstr2bDocuments || []).map(row => ["GSTR-2B", row.kind, row.number, row.date, row.party, row.gstin, row.taxable, row.igst, row.cgst, row.sgst])
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...documents]);
+    worksheet["!cols"] = [{ wch: 12 }, { wch: 16 }, { wch: 24 }, { wch: 14 }, { wch: 30 }, { wch: 18 }, ...Array.from({ length: 4 }, () => ({ wch: 16 }))];
+    const sheetName = `${monthName.slice(0, 3)} ${calendarYear}`;
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  });
+  XLSX.writeFile(workbook, `gst-fy-${financialYear}-comparison.xlsx`);
+}
+
+function printGstFyComparison(financialYear = "") {
+  const allRows = gstFyExportRows();
+  const rows = financialYear ? allRows.filter(row => row.financialYear === `FY ${financialYear}`) : allRows;
   if (!rows.length) return toast("No financial-year GST data to print.");
-  const printableRows = rows.map(row => `<tr class="${row.rowType === "Grand total" ? "grand-total" : row.rowType === "FY total" ? "fy-total" : ""}"><td>${html(row.financialYear)}</td><td>${html(row.month)}</td><td class="num">${money2(row.gstr1Taxable)}</td><td class="num">${money2(row.gstr2bTaxable)}</td><td class="num">${money2(row.taxableDifference)}</td><td class="num">${money2(row.gstr1Total)}</td><td class="num">${money2(row.gstr2bTotal)}</td><td class="num">${money2(row.totalDifference)}</td></tr>`).join("");
+  const taxableOnly = Boolean($("#gstFyTaxableOnly")?.checked);
+  const printableRows = rows.map(row => `<tr class="${row.rowType === "Grand total" ? "grand-total" : row.rowType === "FY total" ? "fy-total" : ""}"><td>${html(row.financialYear)}</td><td>${html(row.month)}</td><td class="num">${money2(row.gstr1Taxable)}</td><td class="num">${money2(row.gstr2bTaxable)}</td><td class="num">${money2(row.taxableDifference)}</td>${taxableOnly ? "" : `<td class="num">${money2(row.gstr1Total)}</td><td class="num">${money2(row.gstr2bTotal)}</td><td class="num">${money2(row.totalDifference)}</td>`}</tr>`).join("");
   const popup = window.open("", "_blank");
   if (!popup) return toast("Allow popups to print the GST financial-year report.");
-  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>GST Financial Year Comparison</title><style>body{font:12px Arial,sans-serif;color:#17251f;padding:20px}h1{font-size:20px;margin:0 0 6px}p{color:#52645b;margin:0 0 16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #87958d;padding:7px;text-align:left}th{background:#e6eee9}.num{text-align:right;white-space:nowrap}.fy-total{background:#eef4ef;font-weight:bold}.grand-total{background:#dcebe4;font-weight:bold}@page{size:landscape;margin:12mm}</style></head><body><h1>Financial Year GSTR-1 vs GSTR-2B</h1><p>Taxable difference = Imported GSTR-1 minus GSTR-2B · Amounts in INR</p><table><thead><tr><th>Financial Year</th><th>Month / Total</th><th>GSTR-1 Taxable</th><th>GSTR-2B Taxable</th><th>Taxable Difference</th><th>GSTR-1 Total</th><th>GSTR-2B Total</th><th>Total Difference</th></tr></thead><tbody>${printableRows}</tbody></table><script>window.onload=()=>window.print()</script></body></html>`);
+  const title = financialYear ? `FY ${financialYear} GSTR-1 vs GSTR-2B` : "Financial Year GSTR-1 vs GSTR-2B";
+  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${html(title)}</title><style>body{font:12px Arial,sans-serif;color:#17251f;padding:20px}h1{font-size:20px;margin:0 0 6px}p{color:#52645b;margin:0 0 16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #87958d;padding:7px;text-align:left}th{background:#e6eee9}.num{text-align:right;white-space:nowrap}.fy-total{background:#eef4ef;font-weight:bold}.grand-total{background:#dcebe4;font-weight:bold}@page{size:landscape;margin:12mm}</style></head><body><h1>${html(title)}</h1><p>Taxable difference = Imported GSTR-1 minus GSTR-2B · Amounts in INR</p><table><thead><tr><th>Financial Year</th><th>Month / Total</th><th>GSTR-1 Taxable</th><th>GSTR-2B Taxable</th><th>Taxable Difference</th>${taxableOnly ? "" : "<th>GSTR-1 Total</th><th>GSTR-2B Total</th><th>Total Difference</th>"}</tr></thead><tbody>${printableRows}</tbody></table><script>window.onload=()=>window.print()</script></body></html>`);
   popup.document.close();
 }
 
@@ -1749,13 +1782,25 @@ function gstFyDocumentTable(rows, title) {
   return `<section><h4>${html(title)} · ${rows.length} rows</h4><div class="gst-fy-document-wrap"><table class="gst-fy-document-table"><thead><tr><th>Type</th><th>Invoice / section</th><th>Date</th><th>Customer / supplier</th><th>GSTIN</th><th class="num">Taxable</th><th class="num">IGST</th><th class="num">CGST</th><th class="num">SGST</th><th class="num gst-fy-total">Total</th></tr></thead><tbody>${body}</tbody><tfoot><tr><th colspan="5">Total (${rows.length} rows)</th><td class="num">${money2(totals.taxable)}</td><td class="num">${money2(totals.igst)}</td><td class="num">${money2(totals.cgst)}</td><td class="num">${money2(totals.sgst)}</td><td class="num gst-fy-total">${money2(total)}</td></tr></tfoot></table></div></section>`;
 }
 
-function gstFyAmountCells(month, side) {
+function gstFyAmountCells(month, side, taxableOnly = false) {
+  if (taxableOnly) return `<td class="num">${money2(month[side].taxable)}</td>`;
   return [...GST_FY_METRICS.map(metric => `<td class="num">${money2(month[side][metric])}</td>`), `<td class="num gst-fy-total">${money2(GST_FY_METRICS.reduce((sum, metric) => sum + num(month[side][metric]), 0))}</td>`].join("");
+}
+
+function gstFyDifferenceCells(differences, totalDifference, taxableOnly = false) {
+  if (taxableOnly) return `<td class="num ${Math.abs(differences[0]) > 1 ? "gst-fy-difference" : ""}">${money2(differences[0])}</td>`;
+  return `${differences.map(value => `<td class="num ${Math.abs(value) > 1 ? "gst-fy-difference" : ""}">${money2(value)}</td>`).join("")}<td class="num gst-fy-total gst-fy-difference">${money2(totalDifference)}</td>`;
 }
 
 function renderGstFyComparison() {
   const node = $("#gstFyComparisonGroups");
   if (!node) return;
+  const taxableOnly = Boolean($("#gstFyTaxableOnly")?.checked);
+  const amountColumns = taxableOnly ? 1 : 5;
+  const detailColspan = 1 + amountColumns * 3;
+  const metricHeaders = taxableOnly
+    ? ["Taxable", "Taxable", "Taxable Δ"]
+    : ["Taxable", "IGST", "CGST", "SGST", "Total", "Taxable", "IGST", "CGST", "SGST", "Total", "Taxable Δ", "IGST Δ", "CGST Δ", "SGST Δ", "Total Δ"];
   const years = gstFyComparisonData();
   if (!years.length) {
     node.innerHTML = `<div class="empty-state">No imported GSTR-1 or GSTR-2B data is available yet.</div>`;
@@ -1778,10 +1823,10 @@ function renderGstFyComparison() {
       const totalDifference = gstr1Total - gstr2bTotal;
       const sourceStatus = `${month.gstr1Returns ? `${month.gstr1Returns} GSTR-1 return${month.gstr1Returns === 1 ? "" : "s"}` : "No GSTR-1 return"} · ${month.gstr2bDocuments.length} GSTR-2B invoices`;
       const detailId = `gst-fy-month-${month.key}`;
-      return `<tr class="gst-fy-month-summary-row"><td><button type="button" class="gst-fy-month-toggle" data-gst-fy-month-toggle aria-expanded="false" aria-controls="${detailId}"><span class="gst-fy-month-arrow" aria-hidden="true">▸</span>${html(monthLabel)}</button></td>${gstFyAmountCells(month, "gstr1")}${gstFyAmountCells(month, "gstr2b")}${differences.map(value => `<td class="num ${Math.abs(value) > 1 ? "gst-fy-difference" : ""}">${money2(value)}</td>`).join("")}<td class="num gst-fy-total gst-fy-difference">${money2(totalDifference)}</td></tr><tr class="gst-fy-month-detail-row" id="${detailId}" hidden><td colspan="16"><div class="gst-fy-documents">${gstFyDocumentTable(month.gstr1Documents, "Imported GSTR-1")}${gstFyDocumentTable(month.gstr2bDocuments, "GSTR-2B")}</div><small class="gst-fy-status">${html(sourceStatus)}</small></td></tr>`;
+      return `<tr class="gst-fy-month-summary-row"><td><button type="button" class="gst-fy-month-toggle" data-gst-fy-month-toggle aria-expanded="false" aria-controls="${detailId}"><span class="gst-fy-month-arrow" aria-hidden="true">▸</span>${html(monthLabel)}</button></td>${gstFyAmountCells(month, "gstr1", taxableOnly)}${gstFyAmountCells(month, "gstr2b", taxableOnly)}${gstFyDifferenceCells(differences, totalDifference, taxableOnly)}</tr><tr class="gst-fy-month-detail-row" id="${detailId}" hidden><td colspan="${detailColspan}"><div class="gst-fy-documents">${gstFyDocumentTable(month.gstr1Documents, "Imported GSTR-1")}${gstFyDocumentTable(month.gstr2bDocuments, "GSTR-2B")}</div><small class="gst-fy-status">${html(sourceStatus)}</small></td></tr>`;
     }).join("");
     const totalDiff = Object.fromEntries(GST_FY_METRICS.map(metric => [metric, year.totals.gstr1[metric] - year.totals.gstr2b[metric]]));
-    return `<details class="gst-fy-year" ${index === 0 ? "open" : ""}><summary><span class="gst-fy-year-title"><span class="gst-fy-summary-label">Financial Year</span>${yearLabel}</span><span class="gst-fy-year-totals"><span><small>GSTR-1 taxable value</small><strong>${money2(year.totals.gstr1.taxable)}</strong></span><span><small>GSTR-2B taxable value</small><strong>${money2(year.totals.gstr2b.taxable)}</strong></span><span><small>Difference</small><strong>${money2(totalDiff.taxable)}</strong></span></span></summary><div class="gst-fy-table-wrap"><table class="gst-fy-table"><colgroup><col class="gst-fy-month-col">${Array.from({ length: 15 }, () => '<col class="gst-fy-value-col">').join("")}</colgroup><thead><tr><th rowspan="2" scope="col" class="gst-fy-month-heading">Month · expand for invoices</th><th colspan="5" scope="colgroup" class="gst-fy-group-heading gst-fy-gstr1-heading">Imported GSTR-1</th><th colspan="5" scope="colgroup" class="gst-fy-group-heading gst-fy-gstr2b-heading">GSTR-2B</th><th colspan="5" scope="colgroup" class="gst-fy-group-heading gst-fy-difference-heading">Difference · GSTR-1 − GSTR-2B</th></tr><tr>${["Taxable", "IGST", "CGST", "SGST", "Total", "Taxable", "IGST", "CGST", "SGST", "Total", "Taxable Δ", "IGST Δ", "CGST Δ", "SGST Δ", "Total Δ"].map((label, index) => `<th class="num ${index < 5 ? "gst-fy-gstr1-heading" : index < 10 ? "gst-fy-gstr2b-heading" : "gst-fy-difference-heading"} ${index % 5 === 4 ? "gst-fy-total" : ""}" scope="col">${label}</th>`).join("")}</tr></thead><tbody>${months}</tbody><tfoot><tr><th scope="row">FY total</th>${gstFyAmountCells(year.totals, "gstr1")}${gstFyAmountCells(year.totals, "gstr2b")}${GST_FY_METRICS.map(metric => `<td class="num gst-fy-difference">${money2(totalDiff[metric])}</td>`).join("")}<td class="num gst-fy-total gst-fy-difference">${money2(GST_FY_METRICS.reduce((sum, metric) => sum + totalDiff[metric], 0))}</td></tr></tfoot></table></div></details>`;
+    return `<details class="gst-fy-year" ${index === 0 ? "open" : ""}><summary><span class="gst-fy-year-title"><span class="gst-fy-summary-label">Financial Year</span>${yearLabel}</span><span class="gst-fy-year-totals"><span><small>GSTR-1 taxable value</small><strong>${money2(year.totals.gstr1.taxable)}</strong></span><span><small>GSTR-2B taxable value</small><strong>${money2(year.totals.gstr2b.taxable)}</strong></span><span><small>Difference</small><strong>${money2(totalDiff.taxable)}</strong></span></span></summary><div class="gst-fy-actions"><button type="button" class="secondary gst-fy-print-year" data-gst-fy-print="${html(year.fy)}">Print FY ${html(year.fy)}</button><button type="button" class="secondary" data-gst-fy-excel="${html(year.fy)}">Export FY ${html(year.fy)} Excel</button></div><div class="gst-fy-table-wrap"><table class="gst-fy-table${taxableOnly ? " gst-fy-taxable-only" : ""}"><colgroup><col class="gst-fy-month-col">${Array.from({ length: detailColspan - 1 }, () => '<col class="gst-fy-value-col">').join("")}</colgroup><thead><tr><th rowspan="2" scope="col" class="gst-fy-month-heading">Month · expand for invoices</th><th colspan="${amountColumns}" scope="colgroup" class="gst-fy-group-heading gst-fy-gstr1-heading">Imported GSTR-1</th><th colspan="${amountColumns}" scope="colgroup" class="gst-fy-group-heading gst-fy-gstr2b-heading">GSTR-2B</th><th colspan="${amountColumns}" scope="colgroup" class="gst-fy-group-heading gst-fy-difference-heading">Difference · GSTR-1 − GSTR-2B</th></tr><tr>${metricHeaders.map((label, headerIndex) => `<th class="num ${headerIndex < amountColumns ? "gst-fy-gstr1-heading" : headerIndex < amountColumns * 2 ? "gst-fy-gstr2b-heading" : "gst-fy-difference-heading"} ${!taxableOnly && headerIndex % 5 === 4 ? "gst-fy-total" : ""}" scope="col">${label}</th>`).join("")}</tr></thead><tbody>${months}</tbody><tfoot><tr><th scope="row">FY total</th>${gstFyAmountCells(year.totals, "gstr1", taxableOnly)}${gstFyAmountCells(year.totals, "gstr2b", taxableOnly)}${gstFyDifferenceCells(GST_FY_METRICS.map(metric => totalDiff[metric]), GST_FY_METRICS.reduce((sum, metric) => sum + totalDiff[metric], 0), taxableOnly)}</tr></tfoot></table></div></details>`;
   }).join("");
   const allYears = years.reduce((total, year) => {
     GST_FY_METRICS.forEach(metric => {
@@ -1914,20 +1959,14 @@ async function showGstUploadedPeriods() {
 }
 
 function bindGstReturns() {
-  const month = $("#gstReturnsMonth");
-  const year = $("#gstReturnsYear");
   const tableMonth = $("#gstReturnsTableMonth");
   const tableYear = $("#gstReturnsTableYear");
-  if (month && !month.value) month.value = todayIso().slice(0, 7);
-  if (year && !year.value) year.value = todayIso().slice(0, 4);
   if (tableMonth && !tableMonth.value) tableMonth.value = todayIso().slice(0, 7);
   if (tableYear && !tableYear.value) tableYear.value = todayIso().slice(0, 4);
-  syncGstReturnsPeriodControls();
   if (tableMonth && !tableMonth.value) tableMonth.value = todayIso().slice(0, 7);
   if (tableYear && !tableYear.value) tableYear.value = todayIso().slice(0, 4);
   syncGstReturnsTableRangeControls();
   $("#gstUploadedPeriodsBtn")?.addEventListener("click", withBusyClick(showGstUploadedPeriods, "Loading..."));
-  $("#fetchGstReturnsBtn")?.addEventListener("click", withBusyClick(() => { renderGstReturns(); toast("GST report fetched."); }, "Fetching..."));
   $("#importGst2bBtn")?.addEventListener("click", withBusyClick(importGst2bStatement, "Importing..."));
   $("#importGstr1Btn")?.addEventListener("click", withBusyClick(async () => {
     const status = $("#gstr1ImportStatus");
@@ -1975,15 +2014,32 @@ function bindGstReturns() {
     gst2bExpandedSuppliers.clear();
     renderGstReturnsTable(gstReportData || buildGstReport());
   });
-  $("#gstReturnsPeriod")?.addEventListener("change", () => {
-    syncGstReturnsPeriodControls();
-    renderGstReturns();
-  });
   $("#gstFyExpandAll")?.addEventListener("click", () => $$(".gst-fy-year").forEach(details => { details.open = true; }));
   $("#gstFyCollapseAll")?.addEventListener("click", () => $$(".gst-fy-year").forEach(details => { details.open = false; }));
-  $("#gstFyPrintBtn")?.addEventListener("click", printGstFyComparison);
-  $("#gstFyExcelBtn")?.addEventListener("click", withBusyClick(() => csvDownload("gst-financial-year-comparison.csv", gstFyExportRows()), "Exporting..."));
+  $("#gstFyPrintBtn")?.addEventListener("click", () => printGstFyComparison());
+  $("#gstFyTaxableOnly")?.addEventListener("change", renderGstFyComparison);
+  $("#gstFyExcelBtn")?.addEventListener("click", withBusyClick(async () => {
+    try {
+      await exportGstFyExcel();
+    } catch (error) {
+      console.error(error);
+      toast(error.message || "Could not export the GST comparison to Excel.");
+    }
+  }, "Exporting..."));
   $("#gstFyComparisonGroups")?.addEventListener("click", event => {
+    const excelButton = event.target.closest("[data-gst-fy-excel]");
+    if (excelButton) {
+      exportGstFyExcelForYear(excelButton.dataset.gstFyExcel).catch(error => {
+        console.error(error);
+        toast(error.message || "Could not export this financial year to Excel.");
+      });
+      return;
+    }
+    const printButton = event.target.closest("[data-gst-fy-print]");
+    if (printButton) {
+      printGstFyComparison(printButton.dataset.gstFyPrint);
+      return;
+    }
     const button = event.target.closest("[data-gst-fy-month-toggle]");
     if (!button) return;
     const detailRow = document.getElementById(button.getAttribute("aria-controls"));
@@ -2006,12 +2062,8 @@ function bindGstReturns() {
     syncGstReturnsTableRangeControls();
     renderGstReturns();
   }));
-  ["gstReturnsMonth", "gstReturnsYear", "gstReturnsFrom", "gstReturnsTo", "gstReturnsTableMonth", "gstReturnsTableYear", "gstReturnsTableFrom", "gstReturnsTableTo"].forEach(id => $(`#${id}`)?.addEventListener("change", renderGstReturns));
+  ["gstReturnsTableMonth", "gstReturnsTableYear", "gstReturnsTableFrom", "gstReturnsTableTo"].forEach(id => $(`#${id}`)?.addEventListener("change", renderGstReturns));
   ["gstReturnsTableYear", "gstReturnsTableMonth", "gstReturnsTableFrom", "gstReturnsTableTo"].forEach(id => $(`#${id}`)?.addEventListener("input", renderGstReturns));
-  ["gstReturnsMonth", "gstReturnsYear", "gstReturnsFrom", "gstReturnsTo"].forEach(id => $(`#${id}`)?.addEventListener("input", () => {
-    syncGstReturnsPeriodControls();
-    renderGstReturns();
-  }));
   $$('[data-gst-report-tab]').forEach(button => button.addEventListener("click", () => {
     activateGstReportTab(button.dataset.gstReportTab);
     renderGstReturns();
