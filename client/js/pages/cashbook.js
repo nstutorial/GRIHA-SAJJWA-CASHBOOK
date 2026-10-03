@@ -119,9 +119,15 @@ function reconcileBankStatement(rows) {
     && (!search || `${row.description} ${row.cashbook} ${row.status} ${row.date} ${row.amount}`.toLowerCase().includes(search)));
   $("#cashbookReconcileSummary").textContent = `${matched} matched · ${result.length - matched} need review · ${result.length} statement rows · Total credit ${money2(totalCredit)} · Total debit ${money2(totalDebit)}${filtered.length !== result.length ? ` · showing ${filtered.length}` : ""}`;
   table($("#cashbookReconcileTable"), [
-    { label: "Date", key: "date" }, { label: "Description", key: "description" }, { label: "Direction", key: "direction", render: row => row.direction === "credit" ? "Credit" : "Debit" },
-    { label: "Amount", key: "amount", num: true, render: row => money2(row.amount) }, { label: "Cashbook match", key: "cashbook" }, { label: "Status", key: "status", render: row => `<strong class="cashbook-match-${row.status === "Matched" ? "yes" : "no"}">${html(row.status)}</strong>` }
+    { label: "Date", key: "date" }, { label: "Description", key: "description" },
+    { label: "Credit", key: "credit", num: true, render: row => row.direction === "credit" ? money2(row.amount) : "—" },
+    { label: "Debit", key: "debit", num: true, render: row => row.direction === "debit" ? money2(row.amount) : "—" },
+    { label: "Cashbook match", key: "cashbook" }, { label: "Status", key: "status", render: row => `<strong class="cashbook-match-${row.status === "Matched" ? "yes" : "no"}">${html(row.status)}</strong>` }
   ], filtered);
+  const tableNode = $("#cashbookReconcileTable");
+  const visibleCredit = filtered.filter(row => row.direction === "credit").reduce((sum, row) => sum + num(row.amount), 0);
+  const visibleDebit = filtered.filter(row => row.direction === "debit").reduce((sum, row) => sum + num(row.amount), 0);
+  tableNode.insertAdjacentHTML("beforeend", `<tfoot><tr><th colspan="2">Visible total (${filtered.length} rows)</th><th class="num">${money2(visibleCredit)}</th><th class="num">${money2(visibleDebit)}</th><th colspan="2"></th></tr></tfoot>`);
 }
 
 async function saveReconciliationStatement(accountId, rows) {
