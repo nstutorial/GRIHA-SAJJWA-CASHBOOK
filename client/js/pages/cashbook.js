@@ -395,7 +395,36 @@ function bindCashbook() {
     });
   });
   $("#cashbookStatementDailyPrint")?.addEventListener("click", () => {
-    const tableHtml = $("#cashbookStatementDailyTable")?.outerHTML || "";
+    const filteredRows = cashbookStatementRows;
+    const fromDate = text($("#cashbookStatementFrom")?.value);
+    const toDate = text($("#cashbookStatementTo")?.value);
+    const statusFilter = text($("#cashbookStatementStatusFilter")?.value) || "all";
+    const directionFilter = text($("#cashbookStatementDirectionFilter")?.value) || "all";
+    const search = text($("#cashbookStatementSearch")?.value).toLowerCase();
+    const { labels } = cashbookAccountMap();
+    const accountId = text($("#cashbookReconcileAccount")?.value);
+    const legs = data.transactions().filter(row => text(row.bankAccountId) === accountId).flatMap(row => cashbookMovementLegs(row, labels)).filter(row => row.channel === "Online");
+    const used = new Set();
+    const reconciled = filteredRows.map(row => {
+      const candidates = legs.map((leg, index) => ({ leg, index })).filter(({ leg, index }) => !used.has(index) && leg.direction === row.direction && Math.abs(leg.amount - row.amount) < 0.01 && leg.date === row.date);
+      if (candidates.length === 1) { used.add(candidates[0].index); return { ...row, status: "Matched", cashbook: candidates[0].leg.memo || candidates[0].leg.party }; }
+      return { ...row, status: candidates.length > 1 ? "Multiple matches" : "Unmatched", cashbook: candidates.length > 1 ? `${candidates.length} candidates` : "—" };
+    }).filter(row => (statusFilter === "all" || row.status === statusFilter)
+      && (directionFilter === "all" || row.direction === directionFilter)
+      && (!fromDate || row.date >= fromDate)
+      && (!toDate || row.date <= toDate)
+      && (!search || `${row.description} ${row.cashbook} ${row.status} ${row.date} ${row.amount}`.toLowerCase().includes(search)));
+    const daily = new Map();
+    reconciled.forEach(row => {
+      const day = daily.get(row.date) || { date: row.date, credits: 0, debits: 0, rows: 0 };
+      if (row.direction === "credit") day.credits += num(row.amount); else day.debits += num(row.amount);
+      day.rows += 1;
+      daily.set(row.date, day);
+    });
+    const dailyRows = [...daily.values()].sort((a, b) => b.date.localeCompare(a.date));
+    const totalCredit = dailyRows.reduce((sum, day) => sum + day.credits, 0);
+    const totalDebit = dailyRows.reduce((sum, day) => sum + day.debits, 0);
+    const tableHtml = `<table><thead><tr><th>Date</th><th>Credit</th><th>Debit</th><th>Net (Credit − Debit)</th><th>Transactions</th></tr></thead><tbody>${dailyRows.map(day => `<tr><td>${html(day.date)}</td><td class="num">${money2(day.credits)}</td><td class="num">${money2(day.debits)}</td><td class="num">${money2(day.credits - day.debits)}</td><td class="num">${day.rows}</td></tr>`).join("") || '<tr><td colspan="5">No records found</td></tr>'}</tbody><tfoot><tr><th>Grand total (${reconciled.length} rows · ${dailyRows.length} days)</th><th class="num">${money2(totalCredit)}</th><th class="num">${money2(totalDebit)}</th><th class="num">${money2(totalCredit - totalDebit)}</th><th class="num">${reconciled.length}</th></tr></tfoot></table>`;
     const printWindow = window.open("", "_blank", "width=1000,height=750");
     if (!printWindow) return toast("Allow pop-ups to print the day-wise summary.");
     printWindow.document.write(`<!doctype html><html><head><title>Bank Statement Day-wise Summary</title><style>body{font:14px Arial,sans-serif;color:#111;padding:20px}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{border:1px solid #bbb;padding:7px;text-align:left}th.num,td.num{text-align:right}button{display:none}.cashbook-day-arrow{display:none!important}.cashbook-day-date{display:inline!important}.cashbook-day-detail-row[hidden]{display:none}@media print{body{padding:0}}</style></head><body><h1>Bank Statement Day-wise Summary</h1><p>Account: ${html(cashbookAccountById(text($("#cashbookReconcileAccount")?.value))?.name || "Bank")}</p>${tableHtml}</body></html>`);
