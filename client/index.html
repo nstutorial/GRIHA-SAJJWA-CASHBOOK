@@ -990,6 +990,11 @@
           <p class="panel-subtitle">Upload a CSV with Date and Amount (signed) or Debit/Credit columns. Dates may be ISO (YYYY-MM-DD) or DD/MM/YYYY. Matches use account, date, direction, and amount; review every exception.</p>
           <div class="cashbook-reconcile-controls"><label>Bank account<select id="cashbookReconcileAccount"></select></label><label>Statement CSV<input id="cashbookStatementFile" type="file" accept=".csv,text/csv"></label><button type="button" class="secondary" id="cashbookDownloadStatementTemplate">Download CSV template</button></div>
           <button type="button" class="secondary" id="cashbookClearStatement">Clear saved statement</button>
+          <div class="cashbook-reconcile-controls">
+            <label>Filter status<select id="cashbookStatementStatusFilter"><option value="all">All statuses</option><option value="Matched">Matched</option><option value="Unmatched">Unmatched</option><option value="Multiple matches">Multiple matches</option></select></label>
+            <label>Direction<select id="cashbookStatementDirectionFilter"><option value="all">All directions</option><option value="credit">Credit</option><option value="debit">Debit</option></select></label>
+            <label>Search statement<input id="cashbookStatementSearch" type="search" placeholder="Description or cashbook match" autocomplete="off"></label>
+          </div>
           <div id="cashbookReconcileSummary" class="panel-subtitle" role="status"></div>
           <div class="table-wrap"><table id="cashbookReconcileTable"></table></div>
         </section>
