@@ -996,7 +996,13 @@
             <label>Search statement<input id="cashbookStatementSearch" type="search" placeholder="Description or cashbook match" autocomplete="off"></label>
           </div>
           <div id="cashbookReconcileSummary" class="panel-subtitle" role="status"></div>
-          <div class="table-wrap"><table id="cashbookReconcileTable"></table></div>
+          <div class="cashbook-statement-tabs" role="tablist" aria-label="Bank statement view">
+            <button type="button" class="active" data-cashbook-statement-view="transactions" role="tab" aria-selected="true">Transactions</button>
+            <button type="button" data-cashbook-statement-view="daily" role="tab" aria-selected="false">Day-wise summary</button>
+            <button type="button" class="secondary" id="cashbookStatementDailyPrint">Print day-wise summary</button>
+          </div>
+          <div id="cashbookStatementTransactionsView" class="table-wrap" role="tabpanel"><table id="cashbookReconcileTable"></table></div>
+          <div id="cashbookStatementDailyView" class="table-wrap" role="tabpanel" hidden><table id="cashbookStatementDailyTable"></table></div>
         </section>
       </section>
     </section>
