@@ -1137,6 +1137,16 @@ h2 { font-size: 18px; }
 .cashbook-reconcile-controls label { min-width: 220px; }
 .cashbook-match-yes { color: #147044; }
 .cashbook-match-no { color: #a13f28; }
+.cashbook-statement-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0; }
+.cashbook-statement-tabs [role="tab"].active { background: var(--brand); color: #fff; }
+.cashbook-day-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 0; border: 0; background: transparent; color: var(--brand); font: inherit; font-weight: 700; cursor: pointer; }
+.cashbook-day-toggle span { width: 14px; text-align: center; }
+.cashbook-day-date { width: auto !important; }
+.cashbook-day-detail-row > td { padding: 0; background: var(--soft); }
+.cashbook-day-detail-wrap { overflow-x: auto; padding: 8px 12px 12px; }
+.cashbook-day-detail-wrap table { min-width: 760px; background: var(--panel, #fff); }
+.cashbook-day-detail-wrap th { position: static; }
+.cashbook-reconcile-panel tfoot th, .cashbook-reconcile-panel tfoot td { position: static; background: var(--soft); font-weight: 800; }
 .gst-returns-panel { min-width: 0; overflow: hidden; }
 .gst-returns-panel .table-wrap { max-width: 100%; overscroll-behavior-x: contain; }
 .gst-fy-comparison { min-width: 0; margin-top: 14px; }
