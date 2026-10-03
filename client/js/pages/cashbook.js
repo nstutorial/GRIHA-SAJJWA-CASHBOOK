@@ -378,6 +378,9 @@ function bindCashbook() {
   $("#cashbookReconcileAccount")?.addEventListener("change", () => {
     loadReconciliationStatement(text($("#cashbookReconcileAccount")?.value));
   });
+  $("#cashbookStatementStatusFilter")?.addEventListener("change", () => reconcileBankStatement(cashbookStatementRows));
+  $("#cashbookStatementDirectionFilter")?.addEventListener("change", () => reconcileBankStatement(cashbookStatementRows));
+  $("#cashbookStatementSearch")?.addEventListener("input", () => reconcileBankStatement(cashbookStatementRows));
   $("#cashbookStatementFile")?.addEventListener("change", event => {
     const file = event.currentTarget.files?.[0];
     if (!file) return;
