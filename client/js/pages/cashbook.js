@@ -109,11 +109,19 @@ function reconcileBankStatement(rows) {
     return { ...row, status: candidates.length > 1 ? "Multiple matches" : "Unmatched", cashbook: candidates.length > 1 ? `${candidates.length} candidates` : "—" };
   });
   const matched = result.filter(row => row.status === "Matched").length;
-  $("#cashbookReconcileSummary").textContent = `${matched} matched · ${result.length - matched} need review · ${result.length} statement rows`;
+  const totalCredit = result.filter(row => row.direction === "credit").reduce((sum, row) => sum + num(row.amount), 0);
+  const totalDebit = result.filter(row => row.direction === "debit").reduce((sum, row) => sum + num(row.amount), 0);
+  const statusFilter = text($("#cashbookStatementStatusFilter")?.value) || "all";
+  const directionFilter = text($("#cashbookStatementDirectionFilter")?.value) || "all";
+  const search = text($("#cashbookStatementSearch")?.value).toLowerCase();
+  const filtered = result.filter(row => (statusFilter === "all" || row.status === statusFilter)
+    && (directionFilter === "all" || row.direction === directionFilter)
+    && (!search || `${row.description} ${row.cashbook} ${row.status} ${row.date} ${row.amount}`.toLowerCase().includes(search)));
+  $("#cashbookReconcileSummary").textContent = `${matched} matched · ${result.length - matched} need review · ${result.length} statement rows · Total credit ${money2(totalCredit)} · Total debit ${money2(totalDebit)}${filtered.length !== result.length ? ` · showing ${filtered.length}` : ""}`;
   table($("#cashbookReconcileTable"), [
     { label: "Date", key: "date" }, { label: "Description", key: "description" }, { label: "Direction", key: "direction", render: row => row.direction === "credit" ? "Credit" : "Debit" },
     { label: "Amount", key: "amount", num: true, render: row => money2(row.amount) }, { label: "Cashbook match", key: "cashbook" }, { label: "Status", key: "status", render: row => `<strong class="cashbook-match-${row.status === "Matched" ? "yes" : "no"}">${html(row.status)}</strong>` }
-  ], result);
+  ], filtered);
 }
 
 async function saveReconciliationStatement(accountId, rows) {
