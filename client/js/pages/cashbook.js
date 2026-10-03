@@ -128,6 +128,32 @@ function reconcileBankStatement(rows) {
   const visibleCredit = filtered.filter(row => row.direction === "credit").reduce((sum, row) => sum + num(row.amount), 0);
   const visibleDebit = filtered.filter(row => row.direction === "debit").reduce((sum, row) => sum + num(row.amount), 0);
   tableNode.insertAdjacentHTML("beforeend", `<tfoot><tr><th colspan="2">Visible total (${filtered.length} rows)</th><th class="num">${money2(visibleCredit)}</th><th class="num">${money2(visibleDebit)}</th><th colspan="2"></th></tr></tfoot>`);
+
+  const dailyGroups = new Map();
+  filtered.forEach(row => {
+    const day = dailyGroups.get(row.date) || { date: row.date, credits: 0, debits: 0, rows: 0 };
+    if (row.direction === "credit") day.credits += num(row.amount);
+    else day.debits += num(row.amount);
+    day.rows += 1;
+    dailyGroups.set(row.date, day);
+  });
+  const dailyRows = [...dailyGroups.values()].sort((a, b) => b.date.localeCompare(a.date));
+  const dailyTable = $("#cashbookStatementDailyTable");
+  const dateDetails = dailyRows.map((day, index) => {
+    const dayId = `cashbook-statement-day-${index}`;
+    const transactions = filtered.filter(row => row.date === day.date).map(row => `<tr><td>${html(row.date)}</td><td>${html(row.description)}</td><td class="num">${row.direction === "credit" ? money2(row.amount) : "—"}</td><td class="num">${row.direction === "debit" ? money2(row.amount) : "—"}</td><td>${html(row.cashbook)}</td><td>${html(row.status)}</td></tr>`).join("");
+    return `<tr class="cashbook-day-summary-row"><td><button type="button" class="cashbook-day-toggle" aria-expanded="false" aria-controls="${dayId}" data-cashbook-day-toggle><span class="cashbook-day-arrow" aria-hidden="true">▸</span><span class="cashbook-day-date">${html(day.date)}</span></button></td><td class="num">${money2(day.credits)}</td><td class="num">${money2(day.debits)}</td><td class="num">${money2(day.credits - day.debits)}</td><td class="num">${day.rows}</td></tr><tr id="${dayId}" class="cashbook-day-detail-row" hidden><td colspan="5"><div class="cashbook-day-detail-wrap"><table><thead><tr><th>Date</th><th>Description</th><th class="num">Credit</th><th class="num">Debit</th><th>Cashbook match</th><th>Status</th></tr></thead><tbody>${transactions}</tbody></table></div></td></tr>`;
+  }).join("");
+  dailyTable.innerHTML = `<thead><tr><th>Date · expand for transactions</th><th class="num">Credit</th><th class="num">Debit</th><th class="num">Net (Credit − Debit)</th><th class="num">Transactions</th></tr></thead><tbody>${dateDetails || `<tr><td colspan="5">No records found</td></tr>`}</tbody><tfoot><tr><th>Grand total (${filtered.length} rows · ${dailyRows.length} days)</th><th class="num">${money2(visibleCredit)}</th><th class="num">${money2(visibleDebit)}</th><th class="num">${money2(visibleCredit - visibleDebit)}</th><th class="num">${filtered.length}</th></tr></tfoot>`;
+  dailyTable.querySelectorAll("[data-cashbook-day-toggle]").forEach(toggle => {
+    toggle.addEventListener("click", () => {
+      const details = document.getElementById(toggle.getAttribute("aria-controls"));
+      const expanded = toggle.getAttribute("aria-expanded") === "true";
+      toggle.setAttribute("aria-expanded", String(!expanded));
+      toggle.querySelector("span").textContent = expanded ? "▸" : "▾";
+      details.hidden = expanded;
+    });
+  });
 }
 
 async function saveReconciliationStatement(accountId, rows) {
@@ -356,6 +382,27 @@ function cashbookExportRows() {
 }
 
 function bindCashbook() {
+  document.querySelectorAll("[data-cashbook-statement-view]").forEach(button => {
+    button.addEventListener("click", () => {
+      const selectedView = button.dataset.cashbookStatementView;
+      document.querySelectorAll("[data-cashbook-statement-view]").forEach(tab => {
+        const active = tab === button;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+      });
+      $("#cashbookStatementTransactionsView").hidden = selectedView !== "transactions";
+      $("#cashbookStatementDailyView").hidden = selectedView !== "daily";
+    });
+  });
+  $("#cashbookStatementDailyPrint")?.addEventListener("click", () => {
+    const tableHtml = $("#cashbookStatementDailyTable")?.outerHTML || "";
+    const printWindow = window.open("", "_blank", "width=1000,height=750");
+    if (!printWindow) return toast("Allow pop-ups to print the day-wise summary.");
+    printWindow.document.write(`<!doctype html><html><head><title>Bank Statement Day-wise Summary</title><style>body{font:14px Arial,sans-serif;color:#111;padding:20px}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin:12px 0}th,td{border:1px solid #bbb;padding:7px;text-align:left}th.num,td.num{text-align:right}button{display:none}.cashbook-day-arrow{display:none!important}.cashbook-day-date{display:inline!important}.cashbook-day-detail-row[hidden]{display:none}@media print{body{padding:0}}</style></head><body><h1>Bank Statement Day-wise Summary</h1><p>Account: ${html(cashbookAccountById(text($("#cashbookReconcileAccount")?.value))?.name || "Bank")}</p>${tableHtml}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  });
   $("#cashbookDownloadStatementTemplate")?.addEventListener("click", () => {
     const csv = 'Date,Description,Debit,Credit\r\n';
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
